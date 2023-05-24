@@ -1,9 +1,9 @@
 # Bee.SQL
+A very simple way to work with the database
 
 ## Examples
 
 ### Select with out parameters
-
 ```csharp
 using Bee.SQL;
 
