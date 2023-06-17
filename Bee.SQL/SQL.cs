@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Bee.SQL.Models;
+using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
 
@@ -12,8 +13,8 @@ namespace Bee.SQL
         /// <param name="connectionString">Connection string.</param>
         /// <param name="queryText">SQL query.</param>
         /// <param name="parameters">Parameters.</param>
-        /// <returns>The response is returned as a list of dictionary type.</returns>
-        public static List<Dictionary<string, string>> select(string connectionString, string queryText, Dictionary<string, object> parameters = null)
+        /// <returns> Select model. The response is returned as a list of dictionary type.</returns>
+        public static Select select(string connectionString, string queryText, Dictionary<string, object> parameters = null)
         {
             try
             {
@@ -56,11 +57,11 @@ namespace Bee.SQL
                     }
                 }
 
-                return rows;
+                return new Select { code = 1, message = "Request completed successfully", data = rows };
             }
-            catch
+            catch(Exception e)
             {
-                return new List<Dictionary<string, string>>();
+                return new Select { code = 0, message = "Request failed. " + e.Message, data = new List<Dictionary<string, string>>() };
             }
         }
 
@@ -70,12 +71,12 @@ namespace Bee.SQL
         /// <param name="connectionString">Connection string.</param>
         /// <param name="queryText">SQL query.</param>
         /// <param name="parameters">Parameters.</param>
-        /// <returns>The first line is returned as a dictionary.</returns>
-        public static Dictionary<string, string> selectItem(string connectionString, string queryText, Dictionary<string, object> parameters = null)
+        /// <returns> SelectItem model. The first line is returned as a dictionary.</returns>
+        public static SelectItem selectItem(string connectionString, string queryText, Dictionary<string, object> parameters = null)
         {
             try
             {
-                Dictionary<string, string> row = new Dictionary<string, string>();
+                var row = new Dictionary<string, string>();
 
                 using (SqlConnection connection = new SqlConnection(connectionString))
                 {
@@ -110,11 +111,11 @@ namespace Bee.SQL
                     }
                 }
 
-                return row;
+                return new SelectItem { code = 1, message = "Request completed successfully", data = row };
             }
-            catch
+            catch(Exception e)
             {
-                return new Dictionary<string, string>();
+                return new SelectItem { code = 0, message = "Request failed. " + e.Message , data = new Dictionary<string, string>() };
             }
         }
 
@@ -124,8 +125,8 @@ namespace Bee.SQL
         /// <param name="connectionString">Connection string.</param>
         /// <param name="queryText">SQL query.</param>
         /// <param name="parameters">Parameters.</param>
-        /// <returns>The first column of the first row is returned.</returns>
-        public static string selectOne(string connectionString, string queryText, Dictionary<string, object> parameters = null)
+        /// <returns> SelectOne model. The first column of the first row is returned.</returns>
+        public static SelectOne selectOne(string connectionString, string queryText, Dictionary<string, object> parameters = null)
         {
             try
             {
@@ -152,16 +153,16 @@ namespace Bee.SQL
                         {
                             if (reader.Read())
                             {
-                                return reader.IsDBNull(0) ? null : reader[0].ToString();
+                                return new SelectOne { code = 1, message = "Request completed successfully", data = reader.IsDBNull(0) ? null : reader[0].ToString() };
                             }
                         }
                     }
                 }
-                return "";
+                return new SelectOne { code = 0, message = "The request was successful, but no result was returned", data = null };
             }
-            catch
+            catch(Exception e)
             {
-                return null;
+                return new SelectOne { code = 0, message = "Request failed. " + e.Message, data = null };
             }
         }
 
@@ -171,8 +172,8 @@ namespace Bee.SQL
         /// <param name="connectionString">Connection string.</param>
         /// <param name="queryTexts">The SQL querys is represented as a list.</param>
         /// <param name="parameters">Parameters are given accordingly for each request.</param>
-        /// <returns>If the request is successful, 1 is returned, otherwise 0 is returned.</returns>
-        public static int query(string connectionString, List<string> queryTexts, List<Dictionary<string, object>> parameters = null)
+        /// <returns>Query model</returns>
+        public static Query query(string connectionString, List<string> queryTexts, List<Dictionary<string, object>> parameters = null)
         {
             try
             {
@@ -213,21 +214,20 @@ namespace Bee.SQL
 
                                 transaction.Commit();
 
-                                return 1;
+                                return new Query {code = 1, message = "Request completed successfully"};
                             }
                         }
-                        catch
+                        catch(Exception e)
                         {
                             transaction.Rollback();
-
-                            return 0;
+                            return new Query { code = 0, message = "Transaction canceled. " + e.Message };
                         }
                     }
                 }
             }
-            catch
+            catch(Exception e)
             {
-                return 0;
+                return new Query { code = 0, message = "Request failed. " + e.Message };
             }
         }
 
@@ -237,8 +237,8 @@ namespace Bee.SQL
         /// <param name="connectionString">Connection string.</param>
         /// <param name="queryTexts">The SQL query.</param>
         /// <param name="parameters">Parameters.</param>
-        /// <returns>If the request is successful, 1 is returned, otherwise 0 is returned.</returns>
-        public static int query(string connectionString, string queryText, Dictionary<string, object> parameters)
+        /// <returns>Query model</returns>
+        public static Query query(string connectionString, string queryText, Dictionary<string, object> parameters)
         {
             try
             {
@@ -263,16 +263,16 @@ namespace Bee.SQL
 
                         int result = command.ExecuteNonQuery();
 
-                        if (result > 0)
-                            return 1;
-
-                        return 0;
+                        if(result > 0)
+                            return new Query { code = 1, message = "Request completed successfully! Number of changes:" + result };
+                        else
+                            return new Query { code = 0, message = "The request was completed successfully, but the database did not change" };
                     }
                 }
             }
-            catch
+            catch(Exception e)
             {
-                return -1;
+                return new Query { code = 0, message = "Request failed. " + e.Message };
             }
         }
     }
