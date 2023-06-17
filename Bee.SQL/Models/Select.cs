@@ -4,15 +4,15 @@ namespace Bee.SQL.Models
 {
     public class Select
     {
-        public int code { get; set; }
+        public bool execute { get; set; }
         public string message { get; set; }
-        public List<Dictionary<string, string>> data { get; set; }
+        public List<Dictionary<string, string>> result { get; set; }
 
         public Select() 
         {
-            code = 0;
+            execute = false;
             message = null;
-            data = new List<Dictionary<string, string>>();
+            result = new List<Dictionary<string, string>>();
         }
     }
 }

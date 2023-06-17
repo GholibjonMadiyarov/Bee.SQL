@@ -2,12 +2,12 @@
 {
     public class Query
     {
-        public int code { get; set; }
+        public bool execute { get; set; }
         public string message { get; set; }
 
         public Query() 
         {
-            code = 0;
+            execute = false;
             message = null;
         }
     }

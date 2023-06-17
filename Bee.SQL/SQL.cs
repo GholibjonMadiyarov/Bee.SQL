@@ -57,11 +57,11 @@ namespace Bee.SQL
                     }
                 }
 
-                return new Select { code = 1, message = "Request completed successfully", data = rows };
+                return new Select { execute = true, message = "Request completed successfully", result = rows };
             }
             catch(Exception e)
             {
-                return new Select { code = 0, message = "Request failed. " + e.Message, data = new List<Dictionary<string, string>>() };
+                return new Select { execute = false, message = "Request failed. " + e.Message, result = new List<Dictionary<string, string>>() };
             }
         }
 
@@ -111,11 +111,11 @@ namespace Bee.SQL
                     }
                 }
 
-                return new SelectItem { code = 1, message = "Request completed successfully", data = row };
+                return new SelectItem { execute = true, message = "Request completed successfully", result = row };
             }
             catch(Exception e)
             {
-                return new SelectItem { code = 0, message = "Request failed. " + e.Message , data = new Dictionary<string, string>() };
+                return new SelectItem { execute = false, message = "Request failed. " + e.Message , result = new Dictionary<string, string>() };
             }
         }
 
@@ -153,16 +153,16 @@ namespace Bee.SQL
                         {
                             if (reader.Read())
                             {
-                                return new SelectOne { code = 1, message = "Request completed successfully", data = reader.IsDBNull(0) ? null : reader[0].ToString() };
+                                return new SelectOne { execute = true, message = "Request completed successfully", result = reader.IsDBNull(0) ? null : reader[0].ToString() };
                             }
                         }
                     }
                 }
-                return new SelectOne { code = 0, message = "The request was successful, but no result was returned", data = null };
+                return new SelectOne { execute = false, message = "The request was successful, but no result was returned", result = null };
             }
             catch(Exception e)
             {
-                return new SelectOne { code = 0, message = "Request failed. " + e.Message, data = null };
+                return new SelectOne { execute = false, message = "Request failed. " + e.Message, result = null };
             }
         }
 
@@ -198,12 +198,12 @@ namespace Bee.SQL
 
                                     if (parameters != null)
                                     {
-                                        foreach (var parameter in parameters[index])
+                                        if (parameters[index] != null)
                                         {
-                                            if (parameters[index] == null)
-                                                command.Parameters.AddWithValue(parameter.Key, DBNull.Value);
-                                            else
-                                                command.Parameters.AddWithValue(parameter.Key, parameter.Value);
+                                            foreach (var parameter in parameters[index])
+                                            {
+                                                command.Parameters.AddWithValue(parameter.Key, parameter.Value != null ? parameter.Value : DBNull.Value);
+                                            }
                                         }
                                     }
 
@@ -214,22 +214,23 @@ namespace Bee.SQL
 
                                 transaction.Commit();
 
-                                return new Query {code = 1, message = "Request completed successfully"};
+                                return new Query { execute = true, message = "Request completed successfully"};
                             }
                         }
                         catch(Exception e)
                         {
                             transaction.Rollback();
-                            return new Query { code = 0, message = "Transaction canceled. " + e.Message };
+                            return new Query { execute = false, message = "Transaction canceled. " + e.Message };
                         }
                     }
                 }
             }
             catch(Exception e)
             {
-                return new Query { code = 0, message = "Request failed. " + e.Message };
+                return new Query { execute = false, message = "Request failed. " + e.Message };
             }
         }
+
 
         /// <summary>
         /// Executes update, insert, delete requests.
@@ -238,7 +239,7 @@ namespace Bee.SQL
         /// <param name="queryTexts">The SQL query.</param>
         /// <param name="parameters">Parameters.</param>
         /// <returns>Query model</returns>
-        public static Query query(string connectionString, string queryText, Dictionary<string, object> parameters)
+        public static Query query(string connectionString, string queryText, Dictionary<string, object> parameters = null)
         {
             try
             {
@@ -264,15 +265,15 @@ namespace Bee.SQL
                         int result = command.ExecuteNonQuery();
 
                         if(result > 0)
-                            return new Query { code = 1, message = "Request completed successfully! Number of changes:" + result };
+                            return new Query { execute = true, message = "Request completed successfully! Number of changes:" + result };
                         else
-                            return new Query { code = 0, message = "The request was completed successfully, but the database did not change" };
+                            return new Query { execute = false, message = "The request was completed successfully, but the database did not change" };
                     }
                 }
             }
             catch(Exception e)
             {
-                return new Query { code = 0, message = "Request failed. " + e.Message };
+                return new Query { execute = true, message = "Request failed. " + e.Message };
             }
         }
     }

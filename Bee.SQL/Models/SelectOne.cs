@@ -2,15 +2,15 @@
 {
     public class SelectOne
     {
-        public int code { get; set; }
+        public bool execute { get; set; }
         public string message { get; set; }
-        public string data { get; set; }
+        public string result { get; set; }
 
         public SelectOne() 
         {
-            code = 0;
+            execute = false;
             message = null;
-            data = null;
+            result = null;
         }
     }
 }
