@@ -2,13 +2,13 @@
 
 namespace Bee.SQL.Models
 {
-    internal class Select
+    public class SelectItem
     {
         public int code { get; set; }
         public string message { get; set; }
         public Dictionary<string, string> data { get; set; }
 
-        public Select() 
+        public SelectItem() 
         {
             code = 0;
             message = null;

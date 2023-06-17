@@ -1,6 +1,6 @@
 ﻿namespace Bee.SQL.Models
 {
-    internal class SelectOne
+    public class SelectOne
     {
         public int code { get; set; }
         public string message { get; set; }

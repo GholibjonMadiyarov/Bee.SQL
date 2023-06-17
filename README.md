@@ -48,7 +48,7 @@ static void Main(string[] args)
 	var connectionString = "Server=127.0.0.1;Database=db_name;User Id=db_user;Password=db_password;Connection Timeout=15";
 	var select = SQL.select(connectionString, "select id, name, lastname, age from users");
 	
-	if(select.code == 1)
+	if(select.code > 0)
 	{
 		foreach(var item in select.data)
 		{
@@ -58,6 +58,46 @@ static void Main(string[] args)
 	else
 	{
 		Console.WriteLine("No result!" + select.message);
+	}
+}
+```
+
+### Insert example
+```csharp
+using Bee.SQL;
+
+static void Main(string[] args)
+{
+	var connectionString = "Server=127.0.0.1;Database=db_name;User Id=db_user;Password=db_password;Connection Timeout=15";
+	var query = SQL.query(connectionString, "insert into users(name, lastname, age) values('Gholibjon', 'Madiyarov', 29)");
+	
+	if(query.code > 0)
+	{
+		Console.WriteLine("Request completed successfully " + query.message);
+	}
+	else
+	{
+		Console.WriteLine("Request failed " + query.message);
+	}
+}
+```
+
+### Insert example with parameters
+```csharp
+using Bee.SQL;
+
+static void Main(string[] args)
+{
+	var connectionString = "Server=127.0.0.1;Database=db_name;User Id=db_user;Password=db_password;Connection Timeout=15";
+	var query = SQL.query(connectionString, "insert into users(name, lastname, age) values(@name, @lastname, @age)", new Dictionary<string, object>{{"@name", "Gholibjon"}, {"@lastname", "Madiyarov"}, {"@age", 29}});
+	
+	if(query.code > 0)
+	{
+		Console.WriteLine("Request completed successfully " + query.message);
+	}
+	else
+	{
+		Console.WriteLine("Request failed " + query.message);
 	}
 }
 ```
