@@ -40,10 +40,14 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Models\Insert.cs" />
+    <Compile Include="Models\Delete.cs" />
+    <Compile Include="Models\Update.cs" />
     <Compile Include="Models\Query.cs" />
-    <Compile Include="Models\SelectOne.cs" />
-    <Compile Include="Models\SelectItem.cs" />
+    <Compile Include="Models\SelectValue.cs" />
+    <Compile Include="Models\SelectRow.cs" />
     <Compile Include="Models\Select.cs" />
+    <Compile Include="QueryType.cs" />
     <Compile Include="SQL.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

@@ -1,16 +1,16 @@
 ﻿namespace Bee.SQL.Models
 {
-    public class SelectOne
+    public class Delete
     {
         public bool execute { get; set; }
         public string message { get; set; }
-        public string result { get; set; }
+        public int affectedRowCount { get; set; }
 
-        public SelectOne() 
+        public Delete() 
         {
             execute = false;
             message = null;
-            result = null;
+            affectedRowCount = 0;
         }
     }
 }

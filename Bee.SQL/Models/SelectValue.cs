@@ -1,16 +1,16 @@
 ﻿namespace Bee.SQL.Models
 {
-    public class Query
+    public class SelectValue
     {
         public bool execute { get; set; }
         public string message { get; set; }
-        public int result { get; set; }
+        public object value { get; set; }
 
-        public Query() 
+        public SelectValue() 
         {
             execute = false;
             message = null;
-            result = -1;
+            value = null;
         }
     }
 }
