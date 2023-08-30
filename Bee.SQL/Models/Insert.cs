@@ -2,17 +2,17 @@
 
 namespace Bee.SQL.Models
 {
-    public class Select
+    public class Insert
     {
         public bool execute { get; set; }
         public string message { get; set; }
-        public List<Dictionary<string, object>> result { get; set; }
+        public List<int?> insertedId { get; set; }
 
-        public Select() 
+        public Insert() 
         {
             execute = false;
             message = null;
-            result = new List<Dictionary<string, object>>();
+            insertedId = new List<int?>();
         }
     }
 }
