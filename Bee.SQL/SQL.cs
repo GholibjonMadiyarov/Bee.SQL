@@ -177,7 +177,7 @@ namespace Bee.SQL
         /// <param name="queryTexts">The SQL querys is represented as a list.</param>
         /// <param name="parameters">Parameters are given accordingly for each request.</param>
         /// <returns>Query model</returns>
-        public static Insert insert(string connectionString, List<string> queryTexts, List<Dictionary<string, object>> parameters = null)
+        public static Insert insert(string connectionString, List<string> queryTexts, List<Dictionary<string, object>> parameters = null, bool isProcedure = false)
         {
             try
             {
@@ -198,8 +198,8 @@ namespace Bee.SQL
 
                                 while (index <= queryTexts.Count - 1)
                                 {
-                                    command.CommandType = CommandType.Text;
-                                    command.CommandText = queryTexts[index] + "; SELECT SCOPE_IDENTITY();";
+                                    command.CommandType = isProcedure == true ? CommandType.StoredProcedure : CommandType.Text;
+                                    command.CommandText = queryTexts[index] + (isProcedure == false ? "; SELECT SCOPE_IDENTITY();" : "");
 
                                     command.Parameters.Clear();
 
@@ -246,7 +246,7 @@ namespace Bee.SQL
         /// <param name="queryText">The SQL query is represented as a text.</param>
         /// <param name="parameters">Parameters</param>
         /// <returns>Query model</returns>
-        public static Insert insert(string connectionString, string queryText, Dictionary<string, object> parameters = null)
+        public static Insert insert(string connectionString, string queryText, Dictionary<string, object> parameters = null, bool isProcedure = false)
         {
             try
             {
@@ -261,8 +261,8 @@ namespace Bee.SQL
                             using (SqlCommand command = new SqlCommand())
                             {
                                 command.Connection = connection;
-                                command.CommandType = CommandType.Text;
-                                command.CommandText = queryText + "; SELECT SCOPE_IDENTITY();";
+                                command.CommandType = isProcedure == true ? CommandType.StoredProcedure : CommandType.Text;
+                                command.CommandText = queryText + (isProcedure == false ? "; SELECT SCOPE_IDENTITY();" : "");
 
                                 if (parameters != null)
                                 {
@@ -306,7 +306,7 @@ namespace Bee.SQL
         /// <param name="queryText">The SQL query.</param>
         /// <param name="parameters">Parameters.</param>
         /// <returns>Query model</returns>
-        public static Update update(string connectionString, string queryText, Dictionary<string, object> parameters = null)
+        public static Update update(string connectionString, string queryText, Dictionary<string, object> parameters = null, bool isProcedure = false)
         {
             try
             {
@@ -316,7 +316,7 @@ namespace Bee.SQL
                     using (SqlCommand command = new SqlCommand())
                     {
                         command.Connection = connection;
-                        command.CommandType = CommandType.Text;
+                        command.CommandType = isProcedure == true ? CommandType.StoredProcedure : CommandType.Text;
                         command.CommandText = queryText;
 
                         if (parameters != null)
@@ -348,7 +348,7 @@ namespace Bee.SQL
         /// <param name="queryText">The SQL query.</param>
         /// <param name="parameters">Parameters.</param>
         /// <returns>Query model</returns>
-        public static Delete delete(string connectionString, string queryText, Dictionary<string, object> parameters = null)
+        public static Delete delete(string connectionString, string queryText, Dictionary<string, object> parameters = null, bool isProcedure = false)
         {
             try
             {
@@ -358,7 +358,7 @@ namespace Bee.SQL
                     using (SqlCommand command = new SqlCommand())
                     {
                         command.Connection = connection;
-                        command.CommandType = CommandType.Text;
+                        command.CommandType = isProcedure == true ? CommandType.StoredProcedure : CommandType.Text;
                         command.CommandText = queryText;
 
                         if (parameters != null)
@@ -390,7 +390,7 @@ namespace Bee.SQL
         /// <param name="queryText">The SQL query.</param>
         /// <param name="parameters">Parameters.</param>
         /// <returns>Query model</returns>
-        public static object query(string connectionString, string queryText, Dictionary<string, object> parameters = null, QueryType queryType = QueryType.Other)
+        public static object query(string connectionString, string queryText, Dictionary<string, object> parameters = null, bool isProcedure = false)
         {
             try
             {
@@ -400,7 +400,7 @@ namespace Bee.SQL
                     using (SqlCommand command = new SqlCommand())
                     {
                         command.Connection = connection;
-                        command.CommandType = CommandType.Text;
+                        command.CommandType = isProcedure == true ? CommandType.StoredProcedure : CommandType.Text;
                         command.CommandText = queryText;
 
                         if (parameters != null)
@@ -412,46 +412,6 @@ namespace Bee.SQL
                                 else
                                     command.Parameters.AddWithValue(parameter.Key, parameter.Value);
                             }
-                        }
-
-                        if(queryType == QueryType.Select)
-                        {
-                            List<Dictionary<string, object>> rows = new List<Dictionary<string, object>>();
-                            using (SqlDataReader reader = command.ExecuteReader())
-                            {
-                                while (reader.Read())
-                                {
-                                    Dictionary<string, object> row = new Dictionary<string, object>();
-
-                                    for (int i = 0; i <= reader.FieldCount - 1; i++)
-                                    {
-                                        row[reader.GetName(i)] = reader.IsDBNull(i) ? null : reader[reader.GetName(i)];
-                                    }
-
-                                    rows.Add(row);
-                                }
-                            }
-
-                            return new Select { execute = true, message = "Request completed successfully!", result = rows };
-                        }
-
-                        if (queryType == QueryType.Insert)
-                        {
-                            var insertedId = new List<int?>();
-                            insertedId.Add(Convert.ToInt32(command.ExecuteScalar()));
-                            return new Insert { execute = true, message = "Request completed successfully!", insertedId = insertedId };
-                        }
-
-                        if (queryType == QueryType.Update)
-                        {
-                            int affectedRowCount = command.ExecuteNonQuery();
-                            return new Update { execute = true, message = "Request completed successfully!", affectedRowCount = affectedRowCount };
-                        }
-
-                        if (queryType == QueryType.Delete)
-                        {
-                            int affectedRowCount = command.ExecuteNonQuery();
-                            return new Delete { execute = true, message = "Request completed successfully!", affectedRowCount = affectedRowCount };
                         }
 
                         int result = command.ExecuteNonQuery();
