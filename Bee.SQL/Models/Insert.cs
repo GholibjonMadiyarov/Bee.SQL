@@ -6,13 +6,15 @@ namespace Bee.SQL.Models
     {
         public bool execute { get; set; }
         public string message { get; set; }
-        public List<int?> insertedId { get; set; }
+        public bool dublicate { get; set; }
+        public List<int?> insertedIds { get; set; }
 
         public Insert() 
         {
             execute = false;
             message = null;
-            insertedId = new List<int?>();
+            dublicate = false;
+            insertedIds = new List<int?>();
         }
     }
 }
