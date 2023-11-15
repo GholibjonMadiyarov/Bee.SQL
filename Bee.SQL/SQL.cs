@@ -438,5 +438,78 @@ namespace Bee.SQL
                 return new Query { execute = false, message = "Request failed. " + e.Message };
             }
         }
+
+        /// <summary>
+        /// Executes any query with out select requests.
+        /// </summary>
+        /// <param name="connectionString">Connection string.</param>
+        /// <param name="queryText">The SQL query.</param>
+        /// <param name="parameters">Parameters.</param>
+        /// <returns>Query model</returns>
+        public static Query query(string connectionString, List<string> queryTexts, List<Dictionary<string, object>> parameters = null, bool isProcedure = false)
+        {
+            try
+            {
+                using (SqlConnection connection = new SqlConnection(connectionString))
+                {
+                    connection.Open();
+
+                    using (SqlTransaction transaction = connection.BeginTransaction())
+                    {
+                        try
+                        {
+                            using (SqlCommand command = new SqlCommand())
+                            {
+                                command.Connection = connection;
+                                command.CommandType = isProcedure == true ? CommandType.StoredProcedure : CommandType.Text;
+
+                                int index = 0;
+                                while (index <= queryTexts.Count - 1)
+                                {
+                                    command.CommandText = queryTexts[index];
+
+                                    command.Parameters.Clear();
+
+                                    if (parameters != null)
+                                    {
+                                        if (parameters[index] != null)
+                                        {
+                                            foreach (KeyValuePair<string, object> parameter in parameters[index])
+                                            {
+                                                if (parameter.Value == null)
+                                                    command.Parameters.AddWithValue(parameter.Key, DBNull.Value);
+                                                else
+                                                    command.Parameters.AddWithValue(parameter.Key, parameter.Value);
+                                            }
+                                        }
+                                    }
+
+                                    command.Transaction = transaction;
+                                    command.ExecuteNonQuery();
+                                    index++;
+                                }
+
+                                transaction.Commit();
+                                return new Query { execute = true, message = "Request completed successfully!" };
+                            }
+                        }
+                        catch (SqlException e)
+                        {
+                            transaction.Rollback();
+                            return new Query { execute = false, message = "Request failed. " + e.Message, dublicate = (e.Number == 2601) ? true : false };
+                        }
+                        catch (Exception e)
+                        {
+                            transaction.Rollback();
+                            return new Query { execute = false, message = "Request failed. " + e.Message };
+                        }
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                return new Query { execute = false, message = "Request failed. " + e.Message };
+            }
+        }
     }
 }
