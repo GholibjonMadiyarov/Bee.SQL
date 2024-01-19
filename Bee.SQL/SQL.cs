@@ -39,7 +39,6 @@ namespace Bee.SQL
                                 else
                                     command.Parameters.AddWithValue(parameter.Key, parameter.Value);
                             }
-
                         }
 
                         using (SqlDataReader reader = command.ExecuteReader())
@@ -98,7 +97,6 @@ namespace Bee.SQL
                                 else
                                     command.Parameters.AddWithValue(parameter.Key, parameter.Value);
                             }
-
                         }
 
                         using (SqlDataReader reader = command.ExecuteReader())
@@ -216,7 +214,7 @@ namespace Bee.SQL
 
                                     command.Transaction = transaction;
 
-                                    insertedIds.Add(Convert.ToInt32(command.ExecuteScalar()));
+                                    insertedIds.Add((int)command.ExecuteScalar());
                                     index++;
                                 }
 
@@ -228,7 +226,7 @@ namespace Bee.SQL
                         catch (SqlException e)
                         {
                             transaction.Rollback();
-                            return new Insert { execute = false, message = "Transaction canceled. " + e.Message, dublicate = (e.Number == 2601) ? true : false, insertedIds = new List<int?>() };
+                            return new Insert { execute = false, message = "Transaction canceled. " + e.Message, duplicate = (e.Number == 2601 || e.Number == 2627) ? true : false, insertedIds = new List<int?>() };
                         }
                         catch (Exception e)
                         {
@@ -283,7 +281,7 @@ namespace Bee.SQL
                                 command.Transaction = transaction;
 
                                 var insertedId = new List<int?>();
-                                insertedId.Add(Convert.ToInt32(command.ExecuteScalar()));
+                                insertedId.Add((int)command.ExecuteScalar());
 
                                 transaction.Commit();
 
@@ -293,7 +291,7 @@ namespace Bee.SQL
                         catch (SqlException e)
                         {
                             transaction.Rollback();
-                            return new Insert { execute = false, message = "Transaction canceled. " + e.Message, dublicate = (e.Number == 2601) ? true : false, insertedIds = new List<int?>() };
+                            return new Insert { execute = false, message = "Transaction canceled. " + e.Message, duplicate = (e.Number == 2601 || e.Number == 2627) ? true : false, insertedIds = new List<int?>() };
                         }
                         catch (Exception e)
                         {
@@ -400,7 +398,7 @@ namespace Bee.SQL
         /// <param name="queryText">The SQL query.</param>
         /// <param name="parameters">Parameters.</param>
         /// <returns>Query model</returns>
-        public static object query(string connectionString, string queryText, Dictionary<string, object> parameters = null, bool isProcedure = false)
+        public static Query query(string connectionString, string queryText, Dictionary<string, object> parameters = null, bool isProcedure = false)
         {
             try
             {
@@ -431,7 +429,7 @@ namespace Bee.SQL
             }
             catch (SqlException e)
             {
-                return new Query { execute = false, message = "Request failed. " + e.Message, dublicate = e.Number == 2601 ? true : false };
+                return new Query { execute = false, message = "Request failed. " + e.Message, duplicate = (e.Number == 2601 || e.Number == 2627) ? true : false };
             }
             catch (Exception e)
             {
@@ -496,7 +494,7 @@ namespace Bee.SQL
                         catch (SqlException e)
                         {
                             transaction.Rollback();
-                            return new Query { execute = false, message = "Request failed. " + e.Message, dublicate = (e.Number == 2601) ? true : false };
+                            return new Query { execute = false, message = "Request failed. " + e.Message, duplicate = (e.Number == 2601 || e.Number == 2627) ? true : false };
                         }
                         catch (Exception e)
                         {
