@@ -8,6 +8,7 @@ namespace Bee.SQL
 {
     public class SQL
     {
+        //public static string connectionString = null;
         /// <summary>
         /// Used to retrieve data from a database.
         /// </summary>
@@ -192,7 +193,7 @@ namespace Bee.SQL
                                 command.Connection = connection;
 
                                 int index = 0;
-                                var insertedIds = new List<int?>();
+                                var insertedIds = new List<object>();
 
                                 while (index <= queryTexts.Count - 1)
                                 {
@@ -214,7 +215,7 @@ namespace Bee.SQL
 
                                     command.Transaction = transaction;
 
-                                    insertedIds.Add((int)command.ExecuteScalar());
+                                    insertedIds.Add(command.ExecuteScalar());
                                     index++;
                                 }
 
@@ -226,19 +227,19 @@ namespace Bee.SQL
                         catch (SqlException e)
                         {
                             transaction.Rollback();
-                            return new Insert { execute = false, message = "Transaction canceled. " + e.Message, duplicate = (e.Number == 2601 || e.Number == 2627) ? true : false, insertedIds = new List<int?>() };
+                            return new Insert { execute = false, message = "Transaction canceled. " + e.Message, duplicate = (e.Number == 2601 || e.Number == 2627) ? true : false, insertedIds = new List<object>() };
                         }
                         catch (Exception e)
                         {
                             transaction.Rollback();
-                            return new Insert { execute = false, message = "Transaction canceled. " + e.Message, insertedIds = new List<int?>() };
+                            return new Insert { execute = false, message = "Transaction canceled. " + e.Message, insertedIds = new List<object>() };
                         }
                     }
                 }
             }
             catch(Exception e)
             {
-                return new Insert { execute = false, message = "Request failed. " + e.Message, insertedIds = new List<int?>() };
+                return new Insert { execute = false, message = "Request failed. " + e.Message, insertedIds = new List<object>() };
             }
         }
 
@@ -280,8 +281,8 @@ namespace Bee.SQL
 
                                 command.Transaction = transaction;
 
-                                var insertedId = new List<int?>();
-                                insertedId.Add((int)command.ExecuteScalar());
+                                var insertedId = new List<object>();
+                                insertedId.Add(command.ExecuteScalar());
 
                                 transaction.Commit();
 
@@ -291,19 +292,19 @@ namespace Bee.SQL
                         catch (SqlException e)
                         {
                             transaction.Rollback();
-                            return new Insert { execute = false, message = "Transaction canceled. " + e.Message, duplicate = (e.Number == 2601 || e.Number == 2627) ? true : false, insertedIds = new List<int?>() };
+                            return new Insert { execute = false, message = "Transaction canceled. " + e.Message, duplicate = (e.Number == 2601 || e.Number == 2627) ? true : false, insertedIds = new List<object>() };
                         }
                         catch (Exception e)
                         {
                             transaction.Rollback();
-                            return new Insert { execute = false, message = "Transaction canceled. " + e.Message, insertedIds = new List<int?>() };
+                            return new Insert { execute = false, message = "Transaction canceled. " + e.Message, insertedIds = new List<object>() };
                         }
                     }
                 }
             }
             catch (Exception e)
             {
-                return new Insert { execute = false, message = "Request failed. " + e.Message, insertedIds = new List<int?>() };
+                return new Insert { execute = false, message = "Request failed. " + e.Message, insertedIds = new List<object>() };
             }
         }
 
