@@ -4,14 +4,14 @@
     {
         public bool execute { get; set; }
         public string message { get; set; }
-        public int result { get; set; }
+        public int data { get; set; }
         public bool duplicate { get; set; }
 
         public Query() 
         {
             execute = false;
             message = null;
-            result = -1;
+            data = -1;
             duplicate = false;
         }
     }

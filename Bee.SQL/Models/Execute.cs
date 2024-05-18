@@ -2,17 +2,17 @@
 
 namespace Bee.SQL.Models
 {
-    public class SelectRow
+    public class Execute
     {
         public bool execute { get; set; }
         public string message { get; set; }
-        public Dictionary<string, object> data { get; set; }
+        public List<Dictionary<string, object>> data { get; set; }
 
-        public SelectRow() 
+        public Execute()
         {
             execute = false;
             message = null;
-            data = new Dictionary<string, object>();
+            data = new List<Dictionary<string, object>>();
         }
     }
 }

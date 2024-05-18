@@ -8,15 +8,14 @@ namespace Bee.SQL
 {
     public class SQL
     {
-        //public static string connectionString = null;
         /// <summary>
         /// Used to retrieve data from a database.
         /// </summary>
         /// <param name="connectionString">Connection string.</param>
         /// <param name="queryText">SQL query.</param>
         /// <param name="parameters">Parameters.</param>
-        /// <returns> Select model. The response is returned as a list of dictionary type.</returns>
-        public static Select select(string connectionString, string queryText, Dictionary<string, object> parameters = null, bool isProcedure = false)
+        /// <returns> Select model</returns>
+        public static Select select(string connectionString, string queryText, Dictionary<string, object> parameters = null)
         {
             try
             {
@@ -25,10 +24,11 @@ namespace Bee.SQL
                 using (SqlConnection connection = new SqlConnection(connectionString))
                 {
                     connection.Open();
+
                     using (SqlCommand command = new SqlCommand())
                     {
                         command.Connection = connection;
-                        command.CommandType = isProcedure == true ? CommandType.StoredProcedure : CommandType.Text;
+                        command.CommandType = CommandType.Text;
                         command.CommandText = queryText;
 
                         if (parameters != null)
@@ -59,11 +59,11 @@ namespace Bee.SQL
                     }
                 }
 
-                return new Select { execute = true, message = "Request completed successfully", result = rows };
+                return new Select { execute = true, message = "Request completed successfully", data = rows };
             }
             catch(Exception e)
             {
-                return new Select { execute = false, message = "Request failed. " + e.Message, result = new List<Dictionary<string, object>>() };
+                return new Select { execute = false, message = "Request failed. " + e.Message, data = new List<Dictionary<string, object>>() };
             }
         }
 
@@ -73,8 +73,8 @@ namespace Bee.SQL
         /// <param name="connectionString">Connection string.</param>
         /// <param name="queryText">SQL query.</param>
         /// <param name="parameters">Parameters.</param>
-        /// <returns> SelectItem model. The first line is returned as a dictionary.</returns>
-        public static SelectRow selectRow(string connectionString, string queryText, Dictionary<string, object> parameters = null, bool isProcedure = false)
+        /// <returns> SelectRow model</returns>
+        public static SelectRow selectRow(string connectionString, string queryText, Dictionary<string, object> parameters = null)
         {
             try
             {
@@ -86,7 +86,7 @@ namespace Bee.SQL
                     using (SqlCommand command = new SqlCommand())
                     {
                         command.Connection = connection;
-                        command.CommandType = isProcedure == true ? CommandType.StoredProcedure : CommandType.Text;
+                        command.CommandType = CommandType.Text;
                         command.CommandText = queryText;
 
                         if (parameters != null)
@@ -113,11 +113,11 @@ namespace Bee.SQL
                     }
                 }
 
-                return new SelectRow { execute = true, message = "Request completed successfully", result = row };
+                return new SelectRow { execute = true, message = "Request completed successfully", data = row };
             }
             catch(Exception e)
             {
-                return new SelectRow { execute = false, message = "Request failed. " + e.Message , result = new Dictionary<string, object>() };
+                return new SelectRow { execute = false, message = "Request failed. " + e.Message , data = new Dictionary<string, object>() };
             }
         }
 
@@ -127,18 +127,19 @@ namespace Bee.SQL
         /// <param name="connectionString">Connection string.</param>
         /// <param name="queryText">SQL query.</param>
         /// <param name="parameters">Parameters.</param>
-        /// <returns> SelectOne model. The first column of the first row is returned.</returns>
-        public static SelectValue selectValue(string connectionString, string queryText, Dictionary<string, object> parameters = null, bool isProcedure = false)
+        /// <returns> SelectValue model. The first column of the first row is returned.</returns>
+        public static SelectValue selectValue(string connectionString, string queryText, Dictionary<string, object> parameters = null)
         {
             try
             {
                 using (SqlConnection connection = new SqlConnection(connectionString))
                 {
                     connection.Open();
+
                     using (SqlCommand command = new SqlCommand())
                     {
                         command.Connection = connection;
-                        command.CommandType = isProcedure == true ? CommandType.StoredProcedure : CommandType.Text;
+                        command.CommandType = CommandType.Text;
                         command.CommandText = queryText;
 
                         if (parameters != null)
@@ -161,6 +162,7 @@ namespace Bee.SQL
                         }
                     }
                 }
+
                 return new SelectValue { execute = false, message = "The request was successful, but no result was returned", value = null };
             }
             catch(Exception e)
@@ -175,8 +177,8 @@ namespace Bee.SQL
         /// <param name="connectionString">Connection string.</param>
         /// <param name="queryTexts">The SQL querys is represented as a list.</param>
         /// <param name="parameters">Parameters are given accordingly for each request.</param>
-        /// <returns>Query model</returns>
-        public static Insert insert(string connectionString, List<string> queryTexts, List<Dictionary<string, object>> parameters = null, bool isProcedure = false)
+        /// <returns>Insert model</returns>
+        public static Insert insert(string connectionString, List<string> queryTexts, List<Dictionary<string, object>> parameters = null)
         {
             try
             {
@@ -193,12 +195,11 @@ namespace Bee.SQL
                                 command.Connection = connection;
 
                                 int index = 0;
-                                var insertedIds = new List<object>();
 
                                 while (index <= queryTexts.Count - 1)
                                 {
-                                    command.CommandType = isProcedure == true ? CommandType.StoredProcedure : CommandType.Text;
-                                    command.CommandText = queryTexts[index] + (isProcedure == false ? "; SELECT SCOPE_IDENTITY();" : "");
+                                    command.CommandType =  CommandType.Text;
+                                    command.CommandText = queryTexts[index];
 
                                     command.Parameters.Clear();
 
@@ -215,31 +216,31 @@ namespace Bee.SQL
 
                                     command.Transaction = transaction;
 
-                                    insertedIds.Add(command.ExecuteScalar());
+                                    command.ExecuteNonQuery();
                                     index++;
                                 }
 
                                 transaction.Commit();
 
-                                return new Insert { execute = true, message = "Request completed successfully", insertedIds = insertedIds};
+                                return new Insert { execute = true, message = "Request completed successfully"};
                             }
                         }
                         catch (SqlException e)
                         {
                             transaction.Rollback();
-                            return new Insert { execute = false, message = "Transaction canceled. " + e.Message, duplicate = (e.Number == 2601 || e.Number == 2627) ? true : false, insertedIds = new List<object>() };
+                            return new Insert { execute = false, message = "Transaction canceled. " + e.Message, duplicate = (e.Number == 2601 || e.Number == 2627) ? true : false };
                         }
                         catch (Exception e)
                         {
                             transaction.Rollback();
-                            return new Insert { execute = false, message = "Transaction canceled. " + e.Message, insertedIds = new List<object>() };
+                            return new Insert { execute = false, message = "Transaction canceled. " + e.Message };
                         }
                     }
                 }
             }
             catch(Exception e)
             {
-                return new Insert { execute = false, message = "Request failed. " + e.Message, insertedIds = new List<object>() };
+                return new Insert { execute = false, message = "Request failed. " + e.Message };
             }
         }
 
@@ -249,8 +250,8 @@ namespace Bee.SQL
         /// <param name="connectionString">Connection string.</param>
         /// <param name="queryText">The SQL query is represented as a text.</param>
         /// <param name="parameters">Parameters</param>
-        /// <returns>Query model</returns>
-        public static Insert insert(string connectionString, string queryText, Dictionary<string, object> parameters = null, bool isProcedure = false)
+        /// <returns>Insert model</returns>
+        public static Insert insert(string connectionString, string queryText, Dictionary<string, object> parameters = null)
         {
             try
             {
@@ -265,8 +266,8 @@ namespace Bee.SQL
                             using (SqlCommand command = new SqlCommand())
                             {
                                 command.Connection = connection;
-                                command.CommandType = isProcedure == true ? CommandType.StoredProcedure : CommandType.Text;
-                                command.CommandText = queryText + (isProcedure == false ? "; SELECT SCOPE_IDENTITY();" : "");
+                                command.CommandType = CommandType.Text;
+                                command.CommandText = queryText;
 
                                 if (parameters != null)
                                 {
@@ -281,30 +282,29 @@ namespace Bee.SQL
 
                                 command.Transaction = transaction;
 
-                                var insertedId = new List<object>();
-                                insertedId.Add(command.ExecuteScalar());
+                                int affectedRowCount = command.ExecuteNonQuery();
 
                                 transaction.Commit();
 
-                                return new Insert { execute = true, message = "Request completed successfully", insertedIds = insertedId };
+                                return new Insert { execute = true, message = "Request completed successfully", affectedRowCount = affectedRowCount };
                             }
                         }
                         catch (SqlException e)
                         {
                             transaction.Rollback();
-                            return new Insert { execute = false, message = "Transaction canceled. " + e.Message, duplicate = (e.Number == 2601 || e.Number == 2627) ? true : false, insertedIds = new List<object>() };
+                            return new Insert { execute = false, message = "Transaction canceled. " + e.Message, duplicate = (e.Number == 2601 || e.Number == 2627) ? true : false };
                         }
                         catch (Exception e)
                         {
                             transaction.Rollback();
-                            return new Insert { execute = false, message = "Transaction canceled. " + e.Message, insertedIds = new List<object>() };
+                            return new Insert { execute = false, message = "Transaction canceled. " + e.Message };
                         }
                     }
                 }
             }
             catch (Exception e)
             {
-                return new Insert { execute = false, message = "Request failed. " + e.Message, insertedIds = new List<object>() };
+                return new Insert { execute = false, message = "Request failed. " + e.Message };
             }
         }
 
@@ -314,8 +314,8 @@ namespace Bee.SQL
         /// <param name="connectionString">Connection string.</param>
         /// <param name="queryText">The SQL query.</param>
         /// <param name="parameters">Parameters.</param>
-        /// <returns>Query model</returns>
-        public static Update update(string connectionString, string queryText, Dictionary<string, object> parameters = null, bool isProcedure = false)
+        /// <returns>Update model</returns>
+        public static Update update(string connectionString, string queryText, Dictionary<string, object> parameters = null)
         {
             try
             {
@@ -325,7 +325,7 @@ namespace Bee.SQL
                     using (SqlCommand command = new SqlCommand())
                     {
                         command.Connection = connection;
-                        command.CommandType = isProcedure == true ? CommandType.StoredProcedure : CommandType.Text;
+                        command.CommandType = CommandType.Text;
                         command.CommandText = queryText;
 
                         if (parameters != null)
@@ -356,8 +356,8 @@ namespace Bee.SQL
         /// <param name="connectionString">Connection string.</param>
         /// <param name="queryText">The SQL query.</param>
         /// <param name="parameters">Parameters.</param>
-        /// <returns>Query model</returns>
-        public static Delete delete(string connectionString, string queryText, Dictionary<string, object> parameters = null, bool isProcedure = false)
+        /// <returns>Delete model</returns>
+        public static Delete delete(string connectionString, string queryText, Dictionary<string, object> parameters = null)
         {
             try
             {
@@ -367,7 +367,7 @@ namespace Bee.SQL
                     using (SqlCommand command = new SqlCommand())
                     {
                         command.Connection = connection;
-                        command.CommandType = isProcedure == true ? CommandType.StoredProcedure : CommandType.Text;
+                        command.CommandType = CommandType.Text;
                         command.CommandText = queryText;
 
                         if (parameters != null)
@@ -399,7 +399,7 @@ namespace Bee.SQL
         /// <param name="queryText">The SQL query.</param>
         /// <param name="parameters">Parameters.</param>
         /// <returns>Query model</returns>
-        public static Query query(string connectionString, string queryText, Dictionary<string, object> parameters = null, bool isProcedure = false)
+        public static Query query(string connectionString, string queryText, Dictionary<string, object> parameters = null)
         {
             try
             {
@@ -409,7 +409,7 @@ namespace Bee.SQL
                     using (SqlCommand command = new SqlCommand())
                     {
                         command.Connection = connection;
-                        command.CommandType = isProcedure == true ? CommandType.StoredProcedure : CommandType.Text;
+                        command.CommandType = CommandType.Text;
                         command.CommandText = queryText;
 
                         if (parameters != null)
@@ -423,8 +423,8 @@ namespace Bee.SQL
                             }
                         }
 
-                        int result = command.ExecuteNonQuery();
-                        return new Query { execute = true, message = "Request completed successfully!", result = result };
+                        int r = command.ExecuteNonQuery();
+                        return new Query { execute = true, message = "Request completed successfully!", data = r };
                     }
                 }
             }
@@ -445,7 +445,7 @@ namespace Bee.SQL
         /// <param name="queryText">The SQL query.</param>
         /// <param name="parameters">Parameters.</param>
         /// <returns>Query model</returns>
-        public static Query query(string connectionString, List<string> queryTexts, List<Dictionary<string, object>> parameters = null, bool isProcedure = false)
+        public static Query query(string connectionString, List<string> queryTexts, List<Dictionary<string, object>> parameters = null)
         {
             try
             {
@@ -460,7 +460,7 @@ namespace Bee.SQL
                             using (SqlCommand command = new SqlCommand())
                             {
                                 command.Connection = connection;
-                                command.CommandType = isProcedure == true ? CommandType.StoredProcedure : CommandType.Text;
+                                command.CommandType = CommandType.Text;
 
                                 int index = 0;
                                 while (index <= queryTexts.Count - 1)
@@ -508,6 +508,65 @@ namespace Bee.SQL
             catch (Exception e)
             {
                 return new Query { execute = false, message = "Request failed. " + e.Message };
+            }
+        }
+
+        /// <summary>
+        /// Executes stored procedures.
+        /// </summary>
+        /// <param name="connectionString">Connection string.</param>
+        /// <param name="queryText">The SQL query.</param>
+        /// <param name="parameters">Parameters.</param>
+        /// <returns>Execute model</returns>
+        public static Execute execute(string connectionString, string procedureName, Dictionary<string, object> procedureParameters = null)
+        {
+            try
+            {
+                List<Dictionary<string, object>> rows = new List<Dictionary<string, object>>();
+
+                using (SqlConnection connection = new SqlConnection(connectionString))
+                {
+                    connection.Open();
+
+                    using (SqlCommand command = new SqlCommand())
+                    {
+                        command.Connection = connection;
+                        command.CommandType = CommandType.StoredProcedure;
+                        command.CommandText = procedureName;
+
+                        if (procedureParameters != null)
+                        {
+                            foreach (KeyValuePair<string, object> parameter in procedureParameters)
+                            {
+                                if (parameter.Value == null)
+                                    command.Parameters.AddWithValue(parameter.Key, DBNull.Value);
+                                else
+                                    command.Parameters.AddWithValue(parameter.Key, parameter.Value);
+                            }
+                        }
+
+                        using (SqlDataReader reader = command.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+                                Dictionary<string, object> row = new Dictionary<string, object>();
+
+                                for (int i = 0; i <= reader.FieldCount - 1; i++)
+                                {
+                                    row[reader.GetName(i)] = reader.IsDBNull(i) ? null : reader[reader.GetName(i)];
+                                }
+
+                                rows.Add(row);
+                            }
+                        }
+                    }
+                }
+
+                return new Execute { execute = true, message = "Request completed successfully", data = rows };
+            }
+            catch (Exception e)
+            {
+                return new Execute { execute = false, message = "Request failed. " + e.Message, data = new List<Dictionary<string, object>>() };
             }
         }
     }
