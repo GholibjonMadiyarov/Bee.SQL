@@ -512,13 +512,13 @@ namespace Bee.SQL
         }
 
         /// <summary>
-        /// Executes stored procedures.
+        /// Executes stored procedures, for sellect.
         /// </summary>
         /// <param name="connectionString">Connection string.</param>
-        /// <param name="queryText">The SQL query.</param>
-        /// <param name="parameters">Parameters.</param>
-        /// <returns>Execute model</returns>
-        public static Execute execute(string connectionString, string procedureName, Dictionary<string, object> procedureParameters = null)
+        /// <param name="procedureName">Procedure name.</param>
+        /// <param name="procedureParameters">Parameters.</param>
+        /// <returns>ExecuteSelect model</returns>
+        public static ExecuteSelect executeSelect(string connectionString, string procedureName, Dictionary<string, object> procedureParameters = null)
         {
             try
             {
@@ -562,11 +562,57 @@ namespace Bee.SQL
                     }
                 }
 
-                return new Execute { execute = true, message = "Request completed successfully", data = rows };
+                return new ExecuteSelect { execute = true, message = "Request completed successfully", data = rows };
             }
             catch (Exception e)
             {
-                return new Execute { execute = false, message = "Request failed. " + e.Message, data = new List<Dictionary<string, object>>() };
+                return new ExecuteSelect { execute = false, message = "Request failed. " + e.Message, data = new List<Dictionary<string, object>>() };
+            }
+        }
+
+        /// <summary>
+        /// Executes stored procedures, with out select requests.
+        /// </summary>
+        /// <param name="connectionString">Connection string.</param>
+        /// <param name="procedureName">Procedure name.</param>
+        /// <param name="procedureParameters">Procedure parameters.</param>
+        /// <returns>ExecuteQuery model</returns>
+        public static ExecuteQuery executeQuery(string connectionString, string procedureName, Dictionary<string, object> procedureParameters = null)
+        {
+            try
+            {
+                using (SqlConnection connection = new SqlConnection(connectionString))
+                {
+                    connection.Open();
+                    using (SqlCommand command = new SqlCommand())
+                    {
+                        command.Connection = connection;
+                        command.CommandType = CommandType.StoredProcedure;
+                        command.CommandText = procedureName;
+
+                        if (procedureName != null)
+                        {
+                            foreach (var parameter in procedureParameters)
+                            {
+                                if (parameter.Value == null)
+                                    command.Parameters.AddWithValue(parameter.Key, DBNull.Value);
+                                else
+                                    command.Parameters.AddWithValue(parameter.Key, parameter.Value);
+                            }
+                        }
+
+                        int r = command.ExecuteNonQuery();
+                        return new ExecuteQuery { execute = true, message = "Request completed successfully!", data = r };
+                    }
+                }
+            }
+            catch (SqlException e)
+            {
+                return new ExecuteQuery { execute = false, message = "Request failed. " + e.Message, duplicate = (e.Number == 2601 || e.Number == 2627) ? true : false };
+            }
+            catch (Exception e)
+            {
+                return new ExecuteQuery { execute = false, message = "Request failed. " + e.Message };
             }
         }
     }

@@ -1,13 +1,13 @@
 ﻿namespace Bee.SQL.Models
 {
-    public class Query
+    public class ExecuteQuery
     {
         public bool execute { get; set; }
         public string message { get; set; }
         public object data { get; set; }
         public bool duplicate { get; set; }
 
-        public Query() 
+        public ExecuteQuery() 
         {
             execute = false;
             message = null;
