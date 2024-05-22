@@ -1,5 +1,5 @@
 # Bee.SQL
-A very simple way to work with the database
+A very simple way to work with a SQL database
 
 ## Examples
 
