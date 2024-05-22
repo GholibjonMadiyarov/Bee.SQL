@@ -10,11 +10,11 @@ using Bee.SQL;
 static void Main(string[] args)
 {
 	var connectionString = "Server=127.0.0.1;Database=db_name;User Id=db_user;Password=db_password;Connection Timeout=15";
-    var select = SQL.select(connectionString, "select id, name, lastname, age from users");
+    var result = SQL.select(connectionString, "select id, name, lastname, age from users");
 	
-	foreach(var item in select.result)
+	foreach(var row in result.data)
 	{
-		Console.WriteLine("id:" + item["id"] + ", name:" + item["name"] + ", lastname:" + item["lastname"] + ", age:" + item["age"]);
+		Console.WriteLine("id:" + row["id"] + ", name:" + row["name"] + ", lastname:" + row["lastname"] + ", age:" + row["age"]);
 	}
 }
 ```
@@ -26,11 +26,11 @@ using Bee.SQL;
 static void Main(string[] args)
 {
 	var connectionString = "Server=127.0.0.1;Database=db_name;User Id=db_user;Password=db_password;Connection Timeout=15";
-	var select = SQL.select(connectionString, "select id, name, lastname, age from users where id = @user_id", new Dictionary<string, object>{{"@user_id", 1}});
+	var result = SQL.select(connectionString, "select id, name, lastname, age from users where id = @user_id", new Dictionary<string, object>{{"@user_id", 1}});
 	
-	foreach(var item in select.result)
+	foreach(var row in result.data)
 	{
-		Console.WriteLine("id:" + item["id"] + ", name:" + item["name"] + ", lastname:" + item["lastname"] + ", age:" + item["age"]);
+		Console.WriteLine("id:" + row["id"] + ", name:" + row["name"] + ", lastname:" + row["lastname"] + ", age:" + row["age"]);
 	}
 }
 ```
@@ -42,9 +42,9 @@ using Bee.SQL;
 static void Main(string[] args)
 {
 	var connectionString = "Server=127.0.0.1;Database=db_name;User Id=db_user;Password=db_password;Connection Timeout=15";
-    var select = SQL.selectRow(connectionString, "select id, name, lastname, age from users");
+    var result = SQL.selectRow(connectionString, "select id, name, lastname, age from users");
 	
-	Console.WriteLine("id:" + item["id"] + ", name:" + item["name"] + ", lastname:" + item["lastname"] + ", age:" + item["age"]);
+	Console.WriteLine("id:" + result.data["id"] + ", name:" + result.data["name"] + ", lastname:" + result.data["lastname"] + ", age:" + result.data["age"]);
 }
 ```
 
@@ -55,9 +55,9 @@ using Bee.SQL;
 static void Main(string[] args)
 {
 	var connectionString = "Server=127.0.0.1;Database=db_name;User Id=db_user;Password=db_password;Connection Timeout=15";
-	var select = SQL.selectRow(connectionString, "select id, name, lastname, age from users where id = @user_id", new Dictionary<string, object>{{"@user_id", 1}});
+	var result = SQL.selectRow(connectionString, "select id, name, lastname, age from users where id = @user_id", new Dictionary<string, object>{{"@user_id", 1}});
 	
-	Console.WriteLine("id:" + item["id"] + ", name:" + item["name"] + ", lastname:" + item["lastname"] + ", age:" + item["age"]);
+	Console.WriteLine("id:" + result.data["id"] + ", name:" + result.data["name"] + ", lastname:" + result.data["lastname"] + ", age:" + result.data["age"]);
 }
 ```
 
@@ -68,9 +68,9 @@ using Bee.SQL;
 static void Main(string[] args)
 {
 	var connectionString = "Server=127.0.0.1;Database=db_name;User Id=db_user;Password=db_password;Connection Timeout=15";
-	var select = SQL.selectValue(connectionString, "select id from users where id = @user_id", new Dictionary<string, object>{{"@user_id", 1}});
+	var result = SQL.selectValue(connectionString, "select id from users where id = @user_id", new Dictionary<string, object>{{"@user_id", 1}});
 	
-	Console.WriteLine("id:" + select.value);
+	Console.WriteLine("id:" + result.value);
 }
 ```
 
@@ -81,18 +81,18 @@ using Bee.SQL;
 static void Main(string[] args)
 {
 	var connectionString = "Server=127.0.0.1;Database=db_name;User Id=db_user;Password=db_password;Connection Timeout=15";
-	var select = SQL.select(connectionString, "select id, name, lastname, age from users");
+	var result = SQL.select(connectionString, "select id, name, lastname, age from users");
 	
-	if(select.execute)
+	if(result.execute)
 	{
-		foreach(var item in select.result)
+		foreach(var row in result.data)
 		{
-			Console.WriteLine("id:" + item["id"] + ", name:" + item["name"] + ", lastname:" + item["lastname"] + ", age:" + item["age"]);
+			Console.WriteLine("id:" + row["id"] + ", name:" + row["name"] + ", lastname:" + row["lastname"] + ", age:" + row["age"]);
 		}
 	}
 	else
 	{
-		Console.WriteLine("No result!" + select.message);
+		Console.WriteLine("No result! " + result.message);
 	}
 }
 ```
@@ -104,15 +104,15 @@ using Bee.SQL;
 static void Main(string[] args)
 {
 	var connectionString = "Server=127.0.0.1;Database=db_name;User Id=db_user;Password=db_password;Connection Timeout=15";
-	var query = SQL.query(connectionString, "insert into users(name, lastname, age) values('Gholibjon', 'Madiyarov', 29)");
+	var result = SQL.query(connectionString, "insert into users(name, lastname, age) values('Gholibjon', 'Madiyarov', 29)");
 	
-	if(query.execute)
+	if(result.execute)
 	{
-		Console.WriteLine("Request completed successfully " + query.message);
+		Console.WriteLine("Request completed successfully " + result.message);
 	}
 	else
 	{
-		Console.WriteLine("Request failed " + query.message);
+		Console.WriteLine("Request failed " + result.message);
 	}
 }
 ```
@@ -124,15 +124,15 @@ using Bee.SQL;
 static void Main(string[] args)
 {
 	var connectionString = "Server=127.0.0.1;Database=db_name;User Id=db_user;Password=db_password;Connection Timeout=15";
-	var query = SQL.query(connectionString, "insert into users(name, lastname, age) values(@name, @lastname, @age)", new Dictionary<string, object>{{"@name", "Gholibjon"}, {"@lastname", "Madiyarov"}, {"@age", 29}});
+	var result = SQL.query(connectionString, "insert into users(name, lastname, age) values(@name, @lastname, @age)", new Dictionary<string, object>{{"@name", "Gholibjon"}, {"@lastname", "Madiyarov"}, {"@age", 29}});
 	
-	if(query.execute)
+	if(result.execute)
 	{
-		Console.WriteLine("Request completed successfully " + query.message);
+		Console.WriteLine("Request completed successfully " + result.message);
 	}
 	else
 	{
-		Console.WriteLine("Request failed " + query.message);
+		Console.WriteLine("Request failed " + result.message);
 	}
 }
 ```
@@ -151,15 +151,15 @@ static void Main(string[] args)
 		"insert into cars(name, description) values('Mercedes Benz', 'One of the most perfect and friendly cars in the world.')"
 	};
 	
-	var query = SQL.query(connectionString, queries);
+	var result = SQL.query(connectionString, queries);
 	
-	if(query.execute)
+	if(result.execute)
 	{
-		Console.WriteLine("Request completed successfully " + query.message);
+		Console.WriteLine("Request completed successfully " + result.message);
 	}
 	else
 	{
-		Console.WriteLine("Request failed " + query.message);
+		Console.WriteLine("Request failed " + result.message);
 	}
 }
 ```
@@ -184,15 +184,15 @@ static void Main(string[] args)
 		new Dictionary<string, object>{{"@name", "Mercedes Benz"}, {"@description", "One of the most perfect and friendly cars in the world."}},
 	};
 	
-	var query = SQL.query(connectionString, queries, parameters);
+	var result = SQL.query(connectionString, queries, parameters);
 	
-	if(query.execute)
+	if(result.execute)
 	{
-		Console.WriteLine("Request completed successfully " + query.message);
+		Console.WriteLine("Request completed successfully " + result.message);
 	}
 	else
 	{
-		Console.WriteLine("Request failed " + query.message);
+		Console.WriteLine("Request failed " + result.message);
 	}
 }
 ```
@@ -217,15 +217,15 @@ static void Main(string[] args)
 		new Dictionary<string, object>{{"@name", "Mercedes Benz"}, {"@description", "One of the most perfect and friendly cars in the world."}},
 	};
 	
-	var query = SQL.query(connectionString, queries, parameters);
+	var result = SQL.query(connectionString, queries, parameters);
 	
-	if(query.execute)
+	if(result.execute)
 	{
-		Console.WriteLine("Request completed successfully " + query.message);
+		Console.WriteLine("Request completed successfully " + result.message);
 	}
 	else
 	{
-		Console.WriteLine("Request failed " + query.message);
+		Console.WriteLine("Request failed " + result.message);
 	}
 }
 ```
