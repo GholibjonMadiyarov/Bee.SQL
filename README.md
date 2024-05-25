@@ -229,3 +229,48 @@ static void Main(string[] args)
 	}
 }
 ```
+
+## Stored Procedures
+
+### For result (select)
+```csharp
+using Bee.SQL;
+
+static void Main(string[] args)
+{
+	var connectionString = "Server=127.0.0.1;Database=db_name;User Id=db_user;Password=db_password;Connection Timeout=15";
+	var result = SQL.executeSelect(connectionString, "ProcedureName");
+	
+	if(result.execute)
+	{
+		foreach(var row in result.data)
+		{
+			//Console.WriteLine();
+		}
+	}
+	else
+	{
+		Console.WriteLine("No result! " + result.message);
+	}
+}
+```
+
+### For any query (insert, update, delete...)
+```csharp
+using Bee.SQL;
+
+static void Main(string[] args)
+{
+	var connectionString = "Server=127.0.0.1;Database=db_name;User Id=db_user;Password=db_password;Connection Timeout=15";
+	var result = SQL.executeQuery(connectionString, "ProcedureName");
+	
+	if(result.execute)
+	{
+		Console.WriteLine(result.data);
+	}
+	else
+	{
+		Console.WriteLine("No result! " + result.message);
+	}
+}
+```
