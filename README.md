@@ -179,7 +179,7 @@ static void Main(string[] args)
 	};
 	
 	var parameters = new List<Dictionary<string, object>>{
-		new Dictionary<string, object>{{"@name", "Gholibjon"}, {"@lastname", "Madiyarov"}, {"@age", 29}},
+		new Dictionary<string, object>{{"@name", "Gholibjon"}, {"@lastname", "Madiyaov"}, {"@age", 29}},
 		new Dictionary<string, object>{{"@name", "Hujand"}, {"@description", "This is one of the most civilized and hospitable cities in Central Asia."}},
 		new Dictionary<string, object>{{"@name", "Mercedes Benz"}, {"@description", "One of the most perfect and friendly cars in the world."}},
 	};
@@ -212,7 +212,7 @@ static void Main(string[] args)
 	};
 	
 	var parameters = new List<Dictionary<string, object>>{
-		new Dictionary<string, object>{{"@name", "Gholibjon"}, {"@lastname", "Madiyarov"}, {"@age", 29}},
+		new Dictionary<string, object>{{"@name", "Gholibjon"}, {"@lastname", "Madiyaov"}, {"@age", 29}},
 		null,
 		new Dictionary<string, object>{{"@name", "Mercedes Benz"}, {"@description", "One of the most perfect and friendly cars in the world."}},
 	};
@@ -226,6 +226,51 @@ static void Main(string[] args)
 	else
 	{
 		Console.WriteLine("Request failed " + result.message);
+	}
+}
+```
+
+## Stored Procedures
+
+### For result (select)
+```csharp
+using Bee.SQL;
+
+static void Main(string[] args)
+{
+	var connectionString = "Server=127.0.0.1;Database=db_name;User Id=db_user;Password=db_password;Connection Timeout=15";
+	var result = SQL.executeSelect(connectionString, "ProcedureName");
+	
+	if(result.execute)
+	{
+		foreach(var row in result.data)
+		{
+			//Console.WriteLine();
+		}
+	}
+	else
+	{
+		Console.WriteLine("No result! " + result.message);
+	}
+}
+```
+
+### For any query (insert, update, delete...)
+```csharp
+using Bee.SQL;
+
+static void Main(string[] args)
+{
+	var connectionString = "Server=127.0.0.1;Database=db_name;User Id=db_user;Password=db_password;Connection Timeout=15";
+	var result = SQL.executeQuery(connectionString, "ProcedureName");
+	
+	if(result.execute)
+	{
+		Console.WriteLine(result.data);
+	}
+	else
+	{
+		Console.WriteLine("No result! " + result.message);
 	}
 }
 ```

@@ -283,7 +283,7 @@ namespace Bee.SQL
                                 command.Transaction = transaction;
 
                                 int affectedRowCount = command.ExecuteNonQuery();
-
+                                
                                 transaction.Commit();
 
                                 return new Insert { execute = true, message = "Request completed successfully", affectedRowCount = affectedRowCount };
