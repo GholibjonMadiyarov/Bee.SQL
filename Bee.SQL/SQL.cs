@@ -3,11 +3,114 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
+using System.Diagnostics;
 
 namespace Bee.SQL
 {
     public class SQL
     {
+        public static string connectionString = null;
+
+        /// <summary>
+        /// Used to retrieve all rows from a table.
+        /// </summary>
+        /// <param name="connectionString">Connection string.</param>
+        /// <param name="tableName">Table name.</param>
+        /// <param name="limit">Limit.</param>
+        /// <returns> Select model </returns>
+        //public static Select select(string connectionString, string tableName, int? limit = null)
+        //{
+        //    try
+        //    {
+        //        List<Dictionary<string, object>> rows = new List<Dictionary<string, object>>();
+
+        //        using (SqlConnection connection = new SqlConnection(connectionString))
+        //        {
+        //            connection.Open();
+
+        //            using (SqlCommand command = new SqlCommand())
+        //            {
+        //                command.Connection = connection;
+        //                command.CommandType = CommandType.Text;
+        //                command.CommandText = "select " + limit == null ? "" : " top @limit " + " * from @table";
+
+        //                command.Parameters.AddWithValue("@table", tableName);
+        //                command.Parameters.AddWithValue("@limit", limit);
+
+        //                using (SqlDataReader reader = command.ExecuteReader())
+        //                {
+        //                    while (reader.Read())
+        //                    {
+        //                        Dictionary<string, object> row = new Dictionary<string, object>();
+
+        //                        for (int i = 0; i <= reader.FieldCount - 1; i++)
+        //                        {
+        //                            row[reader.GetName(i)] = reader.IsDBNull(i) ? null : reader[reader.GetName(i)];
+        //                        }
+
+        //                        rows.Add(row);
+        //                    }
+        //                }
+        //            }
+        //        }
+
+        //        return new Select { execute = true, message = "Request completed successfully", data = rows };
+        //    }
+        //    catch (Exception e)
+        //    {
+        //        return new Select { execute = false, message = "Request failed. " + e.Message, data = new List<Dictionary<string, object>>() };
+        //    }
+        //}
+
+        ///// <summary>
+        ///// Used to retrieve all rows from a table.
+        ///// </summary>
+        ///// <param name="connectionString">Connection string.</param>
+        ///// <param name="tableName">Table name.</param>
+        ///// <returns> Select model </returns>
+        //public static Select select(string connectionString, string tableName)
+        //{
+        //    try
+        //    {
+        //        List<Dictionary<string, object>> rows = new List<Dictionary<string, object>>();
+
+        //        using (SqlConnection connection = new SqlConnection(connectionString))
+        //        {
+        //            connection.Open();
+
+        //            using (SqlCommand command = new SqlCommand())
+        //            {
+        //                command.Connection = connection;
+        //                command.CommandType = CommandType.Text;
+        //                command.CommandText = "select * from @table" ;
+
+        //                command.Parameters.AddWithValue("@table", tableName);
+
+        //                using (SqlDataReader reader = command.ExecuteReader())
+        //                {
+        //                    while (reader.Read())
+        //                    {
+        //                        Dictionary<string, object> row = new Dictionary<string, object>();
+
+        //                        for (int i = 0; i <= reader.FieldCount - 1; i++)
+        //                        {
+        //                            row[reader.GetName(i)] = reader.IsDBNull(i) ? null : reader[reader.GetName(i)];
+        //                        }
+
+        //                        rows.Add(row);
+        //                    }
+        //                }
+        //            }
+        //        }
+
+        //        return new Select { execute = true, message = "Request completed successfully", data = rows };
+        //    }
+        //    catch (Exception e)
+        //    {
+        //        return new Select { execute = false, message = "Request failed. " + e.Message, data = new List<Dictionary<string, object>>() };
+        //    }
+        //}
+
         /// <summary>
         /// Used to retrieve data from a database.
         /// </summary>
@@ -399,7 +502,7 @@ namespace Bee.SQL
         /// <param name="queryText">The SQL query.</param>
         /// <param name="parameters">Parameters.</param>
         /// <returns>Query model</returns>
-        public static Query query(string connectionString, string queryText, Dictionary<string, object> parameters = null)
+        public static Query query(string connectionString, string queryText, Dictionary<string, object> parameters = null, Action<bool, string, bool, object> callback = null)
         {
             try
             {
@@ -424,16 +527,26 @@ namespace Bee.SQL
                         }
 
                         int r = command.ExecuteNonQuery();
+                        
+                        if (callback != null)
+                            callback(true, "Request completed successfully!", false, r);
+
                         return new Query { execute = true, message = "Request completed successfully!", data = r };
                     }
                 }
             }
             catch (SqlException e)
             {
+                if(callback != null)
+                    callback(false, "Request failed. " + e.Message, (e.Number == 2601 || e.Number == 2627) ? true : false, null);
+
                 return new Query { execute = false, message = "Request failed. " + e.Message, duplicate = (e.Number == 2601 || e.Number == 2627) ? true : false };
             }
             catch (Exception e)
             {
+                if (callback != null)
+                    callback(false, "Request failed. " + e.Message, false, null);
+
                 return new Query { execute = false, message = "Request failed. " + e.Message };
             }
         }
