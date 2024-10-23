@@ -9,16 +9,15 @@ namespace Bee.SQL
 {
     public class SQL
     {
-        public static string connectionString = null;
+        public static string connectionString = "Server=127.0.0.1;Database=Test;User Id=TestUser;Password=TestPassword;Connection Timeout=15";
 
         /// <summary>
         /// Used to retrieve all rows from a table.
         /// </summary>
-        /// <param name="connectionString">Connection string.</param>
         /// <param name="tableName">Table name.</param>
         /// <param name="limit">Limit.</param>
         /// <returns> Select model </returns>
-        //public static Select select(string connectionString, string tableName, int? limit = null)
+        //public static Select select(string tableName, int? limit = null)
         //{
         //    try
         //    {
@@ -65,10 +64,9 @@ namespace Bee.SQL
         ///// <summary>
         ///// Used to retrieve all rows from a table.
         ///// </summary>
-        ///// <param name="connectionString">Connection string.</param>
         ///// <param name="tableName">Table name.</param>
         ///// <returns> Select model </returns>
-        //public static Select select(string connectionString, string tableName)
+        //public static Select select(string tableName)
         //{
         //    try
         //    {
@@ -114,11 +112,10 @@ namespace Bee.SQL
         /// <summary>
         /// Used to retrieve data from a database.
         /// </summary>
-        /// <param name="connectionString">Connection string.</param>
         /// <param name="queryText">SQL query.</param>
         /// <param name="parameters">Parameters.</param>
         /// <returns> Select model</returns>
-        public static Select select(string connectionString, string queryText, Dictionary<string, object> parameters = null)
+        public static Select select(string queryText, Dictionary<string, object> parameters = null)
         {
             try
             {
@@ -173,11 +170,10 @@ namespace Bee.SQL
         /// <summary>
         /// Used to retrieve data from a database.
         /// </summary>
-        /// <param name="connectionString">Connection string.</param>
         /// <param name="queryText">SQL query.</param>
         /// <param name="parameters">Parameters.</param>
         /// <returns> SelectRow model</returns>
-        public static SelectRow selectRow(string connectionString, string queryText, Dictionary<string, object> parameters = null)
+        public static SelectRow selectRow(string queryText, Dictionary<string, object> parameters = null)
         {
             try
             {
@@ -227,11 +223,10 @@ namespace Bee.SQL
         /// <summary>
         /// Used to retrieve data from a database.
         /// </summary>
-        /// <param name="connectionString">Connection string.</param>
         /// <param name="queryText">SQL query.</param>
         /// <param name="parameters">Parameters.</param>
         /// <returns> SelectValue model. The first column of the first row is returned.</returns>
-        public static SelectValue selectValue(string connectionString, string queryText, Dictionary<string, object> parameters = null)
+        public static SelectValue selectValue(string queryText, Dictionary<string, object> parameters = null)
         {
             try
             {
@@ -277,11 +272,10 @@ namespace Bee.SQL
         /// <summary>
         /// Requests insert for multiple queres.
         /// </summary>
-        /// <param name="connectionString">Connection string.</param>
         /// <param name="queryTexts">The SQL querys is represented as a list.</param>
         /// <param name="parameters">Parameters are given accordingly for each request.</param>
         /// <returns>Insert model</returns>
-        public static Insert insert(string connectionString, List<string> queryTexts, List<Dictionary<string, object>> parameters = null)
+        public static Insert insert(List<string> queryTexts, List<Dictionary<string, object>> parameters = null)
         {
             try
             {
@@ -350,11 +344,10 @@ namespace Bee.SQL
         /// <summary>
         /// Requests insert
         /// </summary>
-        /// <param name="connectionString">Connection string.</param>
         /// <param name="queryText">The SQL query is represented as a text.</param>
         /// <param name="parameters">Parameters</param>
         /// <returns>Insert model</returns>
-        public static Insert insert(string connectionString, string queryText, Dictionary<string, object> parameters = null)
+        public static Insert insert(string queryText, Dictionary<string, object> parameters = null)
         {
             try
             {
@@ -414,11 +407,10 @@ namespace Bee.SQL
         /// <summary>
         /// Executes update requests.
         /// </summary>
-        /// <param name="connectionString">Connection string.</param>
         /// <param name="queryText">The SQL query.</param>
         /// <param name="parameters">Parameters.</param>
         /// <returns>Update model</returns>
-        public static Update update(string connectionString, string queryText, Dictionary<string, object> parameters = null)
+        public static Update update(string queryText, Dictionary<string, object> parameters = null)
         {
             try
             {
@@ -456,11 +448,10 @@ namespace Bee.SQL
         /// <summary>
         /// Executes delete requests.
         /// </summary>
-        /// <param name="connectionString">Connection string.</param>
         /// <param name="queryText">The SQL query.</param>
         /// <param name="parameters">Parameters.</param>
         /// <returns>Delete model</returns>
-        public static Delete delete(string connectionString, string queryText, Dictionary<string, object> parameters = null)
+        public static Delete delete(string queryText, Dictionary<string, object> parameters = null)
         {
             try
             {
@@ -498,11 +489,10 @@ namespace Bee.SQL
         /// <summary>
         /// Executes any query with out select requests.
         /// </summary>
-        /// <param name="connectionString">Connection string.</param>
         /// <param name="queryText">The SQL query.</param>
         /// <param name="parameters">Parameters.</param>
         /// <returns>Query model</returns>
-        public static Query query(string connectionString, string queryText, Dictionary<string, object> parameters = null, Action<bool, string, bool, object> callback = null)
+        public static Query query(string queryText, Dictionary<string, object> parameters = null, Action<bool, string, bool, object> callback = null)
         {
             try
             {
@@ -554,11 +544,10 @@ namespace Bee.SQL
         /// <summary>
         /// Executes any query with out select requests.
         /// </summary>
-        /// <param name="connectionString">Connection string.</param>
         /// <param name="queryText">The SQL query.</param>
         /// <param name="parameters">Parameters.</param>
         /// <returns>Query model</returns>
-        public static Query query(string connectionString, List<string> queryTexts, List<Dictionary<string, object>> parameters = null)
+        public static Query query(List<string> queryTexts, List<Dictionary<string, object>> parameters = null)
         {
             try
             {
@@ -627,11 +616,10 @@ namespace Bee.SQL
         /// <summary>
         /// Executes stored procedures, for sellect.
         /// </summary>
-        /// <param name="connectionString">Connection string.</param>
         /// <param name="procedureName">Procedure name.</param>
         /// <param name="procedureParameters">Parameters.</param>
         /// <returns>ExecuteSelect model</returns>
-        public static ExecuteSelect executeSelect(string connectionString, string procedureName, Dictionary<string, object> procedureParameters = null)
+        public static ExecuteSelect executeSelect(string procedureName, Dictionary<string, object> procedureParameters = null)
         {
             try
             {
@@ -686,11 +674,10 @@ namespace Bee.SQL
         /// <summary>
         /// Executes stored procedures, with out select requests.
         /// </summary>
-        /// <param name="connectionString">Connection string.</param>
         /// <param name="procedureName">Procedure name.</param>
         /// <param name="procedureParameters">Procedure parameters.</param>
         /// <returns>ExecuteQuery model</returns>
-        public static ExecuteQuery executeQuery(string connectionString, string procedureName, Dictionary<string, object> procedureParameters = null)
+        public static ExecuteQuery executeQuery(string procedureName, Dictionary<string, object> procedureParameters = null)
         {
             try
             {
