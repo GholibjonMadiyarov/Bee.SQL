@@ -17,8 +17,8 @@ using Bee.SQL;
 
 static void Main(string[] args)
 {
-	var connectionString = "Server=127.0.0.1;Database=db_name;User Id=db_user;Password=db_password;Connection Timeout=15";
-    var result = SQL.select(connectionString, "select id, name, lastname, age from users");
+	SQL.connectionString = "Server=127.0.0.1;Database=db_name;User Id=db_user;Password=db_password;Connection Timeout=15";
+    	var result = SQL.select("select id, name, lastname, age from users");
 	
 	foreach(var row in result.data)
 	{
@@ -33,8 +33,8 @@ using Bee.SQL;
 
 static void Main(string[] args)
 {
-	var connectionString = "Server=127.0.0.1;Database=db_name;User Id=db_user;Password=db_password;Connection Timeout=15";
-	var result = SQL.select(connectionString, "select id, name, lastname, age from users where id = @user_id", new Dictionary<string, object>{{"@user_id", 1}});
+	SQL.connectionString = "Server=127.0.0.1;Database=db_name;User Id=db_user;Password=db_password;Connection Timeout=15";
+	var result = SQL.select("select id, name, lastname, age from users where id = @user_id", new Dictionary<string, object>{{"@user_id", 1}});
 	
 	foreach(var row in result.data)
 	{
@@ -49,8 +49,8 @@ using Bee.SQL;
 
 static void Main(string[] args)
 {
-	var connectionString = "Server=127.0.0.1;Database=db_name;User Id=db_user;Password=db_password;Connection Timeout=15";
-    var result = SQL.selectRow(connectionString, "select id, name, lastname, age from users");
+	SQL.connectionString = "Server=127.0.0.1;Database=db_name;User Id=db_user;Password=db_password;Connection Timeout=15";
+    	var result = SQL.selectRow("select id, name, lastname, age from users");
 	
 	Console.WriteLine("id:" + result.data["id"] + ", name:" + result.data["name"] + ", lastname:" + result.data["lastname"] + ", age:" + result.data["age"]);
 }
@@ -62,8 +62,8 @@ using Bee.SQL;
 
 static void Main(string[] args)
 {
-	var connectionString = "Server=127.0.0.1;Database=db_name;User Id=db_user;Password=db_password;Connection Timeout=15";
-	var result = SQL.selectRow(connectionString, "select id, name, lastname, age from users where id = @user_id", new Dictionary<string, object>{{"@user_id", 1}});
+	SQL.connectionString = "Server=127.0.0.1;Database=db_name;User Id=db_user;Password=db_password;Connection Timeout=15";
+	var result = SQL.selectRow("select id, name, lastname, age from users where id = @user_id", new Dictionary<string, object>{{"@user_id", 1}});
 	
 	Console.WriteLine("id:" + result.data["id"] + ", name:" + result.data["name"] + ", lastname:" + result.data["lastname"] + ", age:" + result.data["age"]);
 }
@@ -75,8 +75,8 @@ using Bee.SQL;
 
 static void Main(string[] args)
 {
-	var connectionString = "Server=127.0.0.1;Database=db_name;User Id=db_user;Password=db_password;Connection Timeout=15";
-	var result = SQL.selectValue(connectionString, "select id from users where id = @user_id", new Dictionary<string, object>{{"@user_id", 1}});
+	SQL.connectionString = "Server=127.0.0.1;Database=db_name;User Id=db_user;Password=db_password;Connection Timeout=15";
+	var result = SQL.selectValue("select id from users where id = @user_id", new Dictionary<string, object>{{"@user_id", 1}});
 	
 	Console.WriteLine("id:" + result.value);
 }
@@ -88,8 +88,8 @@ using Bee.SQL;
 
 static void Main(string[] args)
 {
-	var connectionString = "Server=127.0.0.1;Database=db_name;User Id=db_user;Password=db_password;Connection Timeout=15";
-	var result = SQL.select(connectionString, "select id, name, lastname, age from users");
+	SQL.connectionString = "Server=127.0.0.1;Database=db_name;User Id=db_user;Password=db_password;Connection Timeout=15";
+	var result = SQL.select("select id, name, lastname, age from users");
 	
 	if(result.execute)
 	{
@@ -111,8 +111,8 @@ using Bee.SQL;
 
 static void Main(string[] args)
 {
-	var connectionString = "Server=127.0.0.1;Database=db_name;User Id=db_user;Password=db_password;Connection Timeout=15";
-	var result = SQL.query(connectionString, "insert into users(name, lastname, age) values('Gholibjon', 'Madiyarov', 29)");
+	SQL.connectionString = "Server=127.0.0.1;Database=db_name;User Id=db_user;Password=db_password;Connection Timeout=15";
+	var result = SQL.query("insert into users(name, lastname, age) values('Gholibjon', 'Madiyarov', 29)");
 	
 	if(result.execute)
 	{
@@ -131,8 +131,8 @@ using Bee.SQL;
 
 static void Main(string[] args)
 {
-	var connectionString = "Server=127.0.0.1;Database=db_name;User Id=db_user;Password=db_password;Connection Timeout=15";
-	var result = SQL.query(connectionString, "insert into users(name, lastname, age) values(@name, @lastname, @age)", new Dictionary<string, object>{{"@name", "Gholibjon"}, {"@lastname", "Madiyarov"}, {"@age", 29}});
+	SQL.connectionString = "Server=127.0.0.1;Database=db_name;User Id=db_user;Password=db_password;Connection Timeout=15";
+	var result = SQL.query("insert into users(name, lastname, age) values(@name, @lastname, @age)", new Dictionary<string, object>{{"@name", "Gholibjon"}, {"@lastname", "Madiyarov"}, {"@age", 29}});
 	
 	if(result.execute)
 	{
@@ -151,7 +151,7 @@ using Bee.SQL;
 
 static void Main(string[] args)
 {
-	var connectionString = "Server=127.0.0.1;Database=db_name;User Id=db_user;Password=db_password;Connection Timeout=15";
+	SQL.connectionString = "Server=127.0.0.1;Database=db_name;User Id=db_user;Password=db_password;Connection Timeout=15";
 	
 	var queries = new List<string>(){
 		"insert into users(name, lastname, age) values('Gholibjon', 'Madiyarov', 29)",
@@ -159,7 +159,7 @@ static void Main(string[] args)
 		"insert into cars(name, description) values('Mercedes Benz', 'One of the most perfect and friendly cars in the world.')"
 	};
 	
-	var result = SQL.query(connectionString, queries);
+	var result = SQL.query(queries);
 	
 	if(result.execute)
 	{
@@ -178,7 +178,7 @@ using Bee.SQL;
 
 static void Main(string[] args)
 {
-	var connectionString = "Server=127.0.0.1;Database=db_name;User Id=db_user;Password=db_password;Connection Timeout=15";
+	SQL.connectionString = "Server=127.0.0.1;Database=db_name;User Id=db_user;Password=db_password;Connection Timeout=15";
 	
 	var queries = new List<string>(){
 		"insert into users(name, lastname, age) values(@name, @lastname, @age)",
@@ -192,7 +192,7 @@ static void Main(string[] args)
 		new Dictionary<string, object>{{"@name", "Mercedes Benz"}, {"@description", "One of the most perfect and friendly cars in the world."}},
 	};
 	
-	var result = SQL.query(connectionString, queries, parameters);
+	var result = SQL.query(queries, parameters);
 	
 	if(result.execute)
 	{
@@ -211,7 +211,7 @@ using Bee.SQL;
 
 static void Main(string[] args)
 {
-	var connectionString = "Server=127.0.0.1;Database=db_name;User Id=db_user;Password=db_password;Connection Timeout=15";
+	SQL.connectionString = "Server=127.0.0.1;Database=db_name;User Id=db_user;Password=db_password;Connection Timeout=15";
 	
 	var queries = new List<string>(){
 		"insert into users(name, lastname, age) values(@name, @lastname, @age)",
@@ -225,7 +225,7 @@ static void Main(string[] args)
 		new Dictionary<string, object>{{"@name", "Mercedes Benz"}, {"@description", "One of the most perfect and friendly cars in the world."}},
 	};
 	
-	var result = SQL.query(connectionString, queries, parameters);
+	var result = SQL.query(queries, parameters);
 	
 	if(result.execute)
 	{
@@ -246,8 +246,8 @@ using Bee.SQL;
 
 static void Main(string[] args)
 {
-	var connectionString = "Server=127.0.0.1;Database=db_name;User Id=db_user;Password=db_password;Connection Timeout=15";
-	var result = SQL.executeSelect(connectionString, "ProcedureName");
+	SQL.connectionString = "Server=127.0.0.1;Database=db_name;User Id=db_user;Password=db_password;Connection Timeout=15";
+	var result = SQL.executeSelect("ProcedureName");
 	
 	if(result.execute)
 	{
@@ -269,8 +269,8 @@ using Bee.SQL;
 
 static void Main(string[] args)
 {
-	var connectionString = "Server=127.0.0.1;Database=db_name;User Id=db_user;Password=db_password;Connection Timeout=15";
-	var result = SQL.executeQuery(connectionString, "ProcedureName");
+	SQL.connectionString = "Server=127.0.0.1;Database=db_name;User Id=db_user;Password=db_password;Connection Timeout=15";
+	var result = SQL.executeQuery("ProcedureName");
 	
 	if(result.execute)
 	{
