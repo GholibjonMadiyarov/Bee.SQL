@@ -172,6 +172,64 @@ namespace Bee.SQL
         /// </summary>
         /// <param name="queryText">SQL query.</param>
         /// <param name="parameters">Parameters.</param>
+        /// <returns> Select model </returns>
+        public static SelectString selectString(string queryText, Dictionary<string, object> parameters = null)
+        {
+            try
+            {
+                List<Dictionary<string, string>> rows = new List<Dictionary<string, string>>();
+
+                using (SqlConnection connection = new SqlConnection(connectionString))
+                {
+                    connection.Open();
+
+                    using (SqlCommand command = new SqlCommand())
+                    {
+                        command.Connection = connection;
+                        command.CommandType = CommandType.Text;
+                        command.CommandText = queryText;
+
+                        if (parameters != null)
+                        {
+                            foreach (KeyValuePair<string, object> parameter in parameters)
+                            {
+                                if (parameter.Value == null)
+                                    command.Parameters.AddWithValue(parameter.Key, DBNull.Value);
+                                else
+                                    command.Parameters.AddWithValue(parameter.Key, parameter.Value);
+                            }
+                        }
+
+                        using (SqlDataReader reader = command.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+                                Dictionary<string, string> row = new Dictionary<string, string>();
+
+                                for (int i = 0; i <= reader.FieldCount - 1; i++)
+                                {
+                                    row[reader.GetName(i)] = reader.IsDBNull(i) ? null : reader[reader.GetName(i)].ToString();
+                                }
+
+                                rows.Add(row);
+                            }
+                        }
+                    }
+                }
+
+                return new SelectString { execute = true, message = "Request completed successfully", data = rows };
+            }
+            catch (Exception e)
+            {
+                return new SelectString { execute = false, message = "Request failed. " + e.Message, data = new List<Dictionary<string, string>>() };
+            }
+        }
+
+        /// <summary>
+        /// Used to retrieve data from a database.
+        /// </summary>
+        /// <param name="queryText">SQL query.</param>
+        /// <param name="parameters">Parameters.</param>
         /// <returns> SelectRow model</returns>
         public static SelectRow selectRow(string queryText, Dictionary<string, object> parameters = null)
         {
@@ -207,16 +265,18 @@ namespace Bee.SQL
                                 {
                                     row[reader.GetName(i)] = reader.IsDBNull(i) ? null : reader[reader.GetName(i)];
                                 }
+
+                                return new SelectRow { execute = true, message = "Request completed successfully", data = row, read = true };
                             }
                         }
                     }
                 }
 
-                return new SelectRow { execute = true, message = "Request completed successfully", data = row };
+                return new SelectRow { execute = true, message = "Request completed successfully", data = row, read = false };
             }
             catch(Exception e)
             {
-                return new SelectRow { execute = false, message = "Request failed. " + e.Message , data = new Dictionary<string, object>() };
+                return new SelectRow { execute = false, message = "Request failed. " + e.Message , data = new Dictionary<string, object>(), read = false, exception = true };
             }
         }
 
@@ -255,17 +315,17 @@ namespace Bee.SQL
                         {
                             if (reader.Read())
                             {
-                                return new SelectValue { execute = true, message = "Request completed successfully", value = reader.IsDBNull(0) ? null : reader[0] };
+                                return new SelectValue { execute = true, message = "Request completed successfully", value = reader.IsDBNull(0) ? null : reader[0], read = true };
                             }
                         }
                     }
                 }
 
-                return new SelectValue { execute = false, message = "The request was successful, but no result was returned", value = null };
+                return new SelectValue { execute = true, message = "The request was successful, but no result was returned", value = null, read = false };
             }
             catch(Exception e)
             {
-                return new SelectValue { execute = false, message = "Request failed. " + e.Message, value = null};
+                return new SelectValue { execute = false, message = "Request failed. " + e.Message, value = null, read = false, exception = true};
             }
         }
 
