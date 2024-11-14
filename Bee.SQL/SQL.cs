@@ -423,7 +423,7 @@ namespace Bee.SQL
                             {
                                 command.Connection = connection;
                                 command.CommandType = CommandType.Text;
-                                command.CommandText = queryText;
+                                command.CommandText = queryText + "; SELECT SCOPE_IDENTITY()";
 
                                 if (parameters != null)
                                 {
@@ -438,11 +438,13 @@ namespace Bee.SQL
 
                                 command.Transaction = transaction;
 
-                                int affectedRowCount = command.ExecuteNonQuery();
+                                var r = command.ExecuteScalar();
                                 
-                                transaction.Commit();
+                                int lastInsertedId = Convert.ToInt32(r);
 
-                                return new Insert { execute = true, message = "Request completed successfully", affectedRowCount = affectedRowCount };
+                                transaction.Commit();
+                                
+                                return new Insert { execute = true, message = "Request completed successfully", lastInsertedId = lastInsertedId };
                             }
                         }
                         catch (SqlException e)

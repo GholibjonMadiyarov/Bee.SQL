@@ -112,7 +112,7 @@ using Bee.SQL;
 static void Main(string[] args)
 {
 	SQL.connectionString = "Server=127.0.0.1;Database=db_name;User Id=db_user;Password=db_password;Connection Timeout=15";
-	var result = SQL.query("insert into users(name, lastname, age) values('Gholibjon', 'Madiyarov', 29)");
+	var result = SQL.insert("insert into users(name, lastname, age) values('Gholibjon', 'Madiyarov', 29)");
 	
 	if(result.execute)
 	{
@@ -132,7 +132,7 @@ using Bee.SQL;
 static void Main(string[] args)
 {
 	SQL.connectionString = "Server=127.0.0.1;Database=db_name;User Id=db_user;Password=db_password;Connection Timeout=15";
-	var result = SQL.query("insert into users(name, lastname, age) values(@name, @lastname, @age)", new Dictionary<string, object>{{"@name", "Gholibjon"}, {"@lastname", "Madiyarov"}, {"@age", 29}});
+	var result = SQL.insert("insert into users(name, lastname, age) values(@name, @lastname, @age)", new Dictionary<string, object>{{"@name", "Gholibjon"}, {"@lastname", "Madiyarov"}, {"@age", 29}});
 	
 	if(result.execute)
 	{
@@ -159,7 +159,7 @@ static void Main(string[] args)
 		"insert into cars(name, description) values('Mercedes Benz', 'One of the most perfect and friendly cars in the world.')"
 	};
 	
-	var result = SQL.query(queries);
+	var result = SQL.insert(queries);
 	
 	if(result.execute)
 	{
@@ -192,7 +192,7 @@ static void Main(string[] args)
 		new Dictionary<string, object>{{"@name", "Mercedes Benz"}, {"@description", "One of the most perfect and friendly cars in the world."}},
 	};
 	
-	var result = SQL.query(queries, parameters);
+	var result = SQL.insert(queries, parameters);
 	
 	if(result.execute)
 	{
@@ -225,7 +225,7 @@ static void Main(string[] args)
 		new Dictionary<string, object>{{"@name", "Mercedes Benz"}, {"@description", "One of the most perfect and friendly cars in the world."}},
 	};
 	
-	var result = SQL.query(queries, parameters);
+	var result = SQL.insert(queries, parameters);
 	
 	if(result.execute)
 	{

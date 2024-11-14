@@ -7,14 +7,14 @@ namespace Bee.SQL.Models
         public bool execute { get; set; }
         public string message { get; set; }
         public bool duplicate { get; set; }
-        public int affectedRowCount { get; set; }
+        public object lastInsertedId { get; set; }
 
         public Insert() 
         {
             execute = false;
             message = null;
             duplicate = false;
-            affectedRowCount = 0;
+            lastInsertedId = null;
         }
     }
 }
