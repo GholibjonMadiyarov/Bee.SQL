@@ -240,14 +240,14 @@ static void Main(string[] args)
 
 ## Stored Procedures
 
-### For result (select)
+### For result
 ```csharp
 using Bee.SQL;
 
 static void Main(string[] args)
 {
 	SQL.connectionString = "Server=127.0.0.1;Database=db_name;User Id=db_user;Password=db_password;Connection Timeout=15";
-	var result = SQL.executeSelect("ProcedureName");
+	var result = SQL.executeResult("ProcedureName");
 	
 	if(result.execute)
 	{
@@ -263,7 +263,7 @@ static void Main(string[] args)
 }
 ```
 
-### For any query (insert, update, delete...)
+### For without result
 ```csharp
 using Bee.SQL;
 
@@ -274,7 +274,27 @@ static void Main(string[] args)
 	
 	if(result.execute)
 	{
-		Console.WriteLine(result.data);
+		Console.WriteLine("AffectedRowCount:" + result.affectedRowCount);
+	}
+	else
+	{
+		Console.WriteLine("No result! " + result.message);
+	}
+}
+```
+
+### With parametres
+```csharp
+using Bee.SQL;
+
+static void Main(string[] args)
+{
+	SQL.connectionString = "Server=127.0.0.1;Database=db_name;User Id=db_user;Password=db_password;Connection Timeout=15";
+	var result = SQL.executeQuery("ProcedureName", new Dictionary<string, object>{{"@paramName", "ParamValue"}});
+	
+	if(result.execute)
+	{
+		Console.WriteLine("AffectedRowCount:" + result.affectedRowCount);
 	}
 	else
 	{

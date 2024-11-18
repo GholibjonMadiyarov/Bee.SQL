@@ -385,12 +385,12 @@ namespace Bee.SQL
                         catch (SqlException e)
                         {
                             transaction.Rollback();
-                            return new Insert { execute = false, message = "Transaction canceled. " + e.Message, duplicate = (e.Number == 2601 || e.Number == 2627) ? true : false };
+                            return new Insert { execute = false, message = "SqlException. Transaction canceled. " + e.Message, duplicate = (e.Number == 2601 || e.Number == 2627) ? true : false, exception = true };
                         }
                         catch (Exception e)
                         {
                             transaction.Rollback();
-                            return new Insert { execute = false, message = "Transaction canceled. " + e.Message };
+                            return new Insert { execute = false, message = "Exception. Transaction canceled. " + e.Message, exception = true };
                         }
                     }
                 }
@@ -450,12 +450,12 @@ namespace Bee.SQL
                         catch (SqlException e)
                         {
                             transaction.Rollback();
-                            return new Insert { execute = false, message = "Transaction canceled. " + e.Message, duplicate = (e.Number == 2601 || e.Number == 2627) ? true : false };
+                            return new Insert { execute = false, message = "SqlException. Transaction canceled. " + e.Message, duplicate = (e.Number == 2601 || e.Number == 2627) ? true : false, exception = true };
                         }
                         catch (Exception e)
                         {
                             transaction.Rollback();
-                            return new Insert { execute = false, message = "Transaction canceled. " + e.Message };
+                            return new Insert { execute = false, message = "Exception. Transaction canceled. " + e.Message, exception = true };
                         }
                     }
                 }
@@ -681,7 +681,7 @@ namespace Bee.SQL
         /// <param name="procedureName">Procedure name.</param>
         /// <param name="procedureParameters">Parameters.</param>
         /// <returns>ExecuteSelect model</returns>
-        public static ExecuteSelect executeSelect(string procedureName, Dictionary<string, object> procedureParameters = null)
+        public static ExecuteResult executeSelect(string procedureName, Dictionary<string, object> procedureParameters = null)
         {
             try
             {
@@ -725,11 +725,11 @@ namespace Bee.SQL
                     }
                 }
 
-                return new ExecuteSelect { execute = true, message = "Request completed successfully", data = rows };
+                return new ExecuteResult { execute = true, message = "Request completed successfully", data = rows };
             }
             catch (Exception e)
             {
-                return new ExecuteSelect { execute = false, message = "Request failed. " + e.Message, data = new List<Dictionary<string, object>>() };
+                return new ExecuteResult { execute = false, message = "Request failed. " + e.Message, data = new List<Dictionary<string, object>>() };
             }
         }
 
@@ -764,17 +764,17 @@ namespace Bee.SQL
                         }
 
                         int r = command.ExecuteNonQuery();
-                        return new ExecuteQuery { execute = true, message = "Request completed successfully!", data = r };
+                        return new ExecuteQuery { execute = true, message = "Request completed successfully!", affectedRowCount = r };
                     }
                 }
             }
             catch (SqlException e)
             {
-                return new ExecuteQuery { execute = false, message = "Request failed. " + e.Message, duplicate = (e.Number == 2601 || e.Number == 2627) ? true : false };
+                return new ExecuteQuery { execute = false, message = "SqlException. Request failed. " + e.Message, };
             }
             catch (Exception e)
             {
-                return new ExecuteQuery { execute = false, message = "Request failed. " + e.Message };
+                return new ExecuteQuery { execute = false, message = "Exception. Request failed. " + e.Message };
             }
         }
     }

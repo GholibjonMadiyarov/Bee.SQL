@@ -4,15 +4,13 @@
     {
         public bool execute { get; set; }
         public string message { get; set; }
-        public object data { get; set; }
-        public bool duplicate { get; set; }
+        public int affectedRowCount { get; set; }
 
         public ExecuteQuery() 
         {
             execute = false;
             message = null;
-            data = null;
-            duplicate = false;
+            affectedRowCount = 0;
         }
     }
 }

@@ -6,15 +6,19 @@ namespace Bee.SQL.Models
     {
         public bool execute { get; set; }
         public string message { get; set; }
-        public bool duplicate { get; set; }
         public object lastInsertedId { get; set; }
+        public bool duplicate { get; set; }
+        public bool exception { get; set; }
+        public string exceptionType { get; set; }
 
         public Insert() 
         {
             execute = false;
             message = null;
-            duplicate = false;
             lastInsertedId = null;
+            duplicate = false;
+            exception = false;
+            exceptionType = null;
         }
     }
 }

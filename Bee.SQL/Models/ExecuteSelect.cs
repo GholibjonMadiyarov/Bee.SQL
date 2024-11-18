@@ -2,13 +2,13 @@
 
 namespace Bee.SQL.Models
 {
-    public class ExecuteSelect
+    public class ExecuteResult
     {
         public bool execute { get; set; }
         public string message { get; set; }
         public List<Dictionary<string, object>> data { get; set; }
 
-        public ExecuteSelect()
+        public ExecuteResult()
         {
             execute = false;
             message = null;
