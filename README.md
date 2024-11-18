@@ -283,7 +283,7 @@ static void Main(string[] args)
 }
 ```
 
-### With parametres
+### With parameters
 ```csharp
 using Bee.SQL;
 
