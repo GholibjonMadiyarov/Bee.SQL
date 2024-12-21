@@ -439,12 +439,16 @@ namespace Bee.SQL
                                 command.Transaction = transaction;
 
                                 var r = command.ExecuteScalar();
-                                
-                                int lastInsertedId = Convert.ToInt32(r);
+
+                                if (r == null)
+                                {
+                                    transaction.Commit();
+
+                                    return new Insert { execute = true, message = "Request completed successfully", lastInsertedId = null };
+                                }
 
                                 transaction.Commit();
-                                
-                                return new Insert { execute = true, message = "Request completed successfully", lastInsertedId = lastInsertedId };
+                                return new Insert { execute = true, message = "Request completed successfully", lastInsertedId = r };
                             }
                         }
                         catch (SqlException e)
@@ -479,6 +483,7 @@ namespace Bee.SQL
                 using (SqlConnection connection = new SqlConnection(connectionString))
                 {
                     connection.Open();
+
                     using (SqlCommand command = new SqlCommand())
                     {
                         command.Connection = connection;
@@ -497,7 +502,13 @@ namespace Bee.SQL
                         }
 
                         int affectedRowCount = command.ExecuteNonQuery();
-                        return new Update { execute = true, message = "Request completed successfully!", affectedRowCount = affectedRowCount };
+
+                        if (affectedRowCount > 0) 
+                        {
+                            return new Update { execute = true, message = "Request completed successfully!", affectedRowCount = affectedRowCount };
+                        }
+
+                        return new Update { execute = false, message = "Request failed!", affectedRowCount = affectedRowCount };
                     }
                 }
             }
@@ -554,7 +565,7 @@ namespace Bee.SQL
         /// <param name="queryText">The SQL query.</param>
         /// <param name="parameters">Parameters.</param>
         /// <returns>Query model</returns>
-        public static Query query(string queryText, Dictionary<string, object> parameters = null, Action<bool, string, bool, object> callback = null)
+        public static Query query(string queryText, Dictionary<string, object> parameters = null)
         {
             try
             {
@@ -579,9 +590,6 @@ namespace Bee.SQL
                         }
 
                         int r = command.ExecuteNonQuery();
-                        
-                        if (callback != null)
-                            callback(true, "Request completed successfully!", false, r);
 
                         return new Query { execute = true, message = "Request completed successfully!", data = r };
                     }
@@ -589,16 +597,10 @@ namespace Bee.SQL
             }
             catch (SqlException e)
             {
-                if(callback != null)
-                    callback(false, "Request failed. " + e.Message, (e.Number == 2601 || e.Number == 2627) ? true : false, null);
-
                 return new Query { execute = false, message = "Request failed. " + e.Message, duplicate = (e.Number == 2601 || e.Number == 2627) ? true : false };
             }
             catch (Exception e)
             {
-                if (callback != null)
-                    callback(false, "Request failed. " + e.Message, false, null);
-
                 return new Query { execute = false, message = "Request failed. " + e.Message };
             }
         }
