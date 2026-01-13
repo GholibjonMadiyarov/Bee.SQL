@@ -11,7 +11,7 @@ System.Data.SqlClient 4.8.6
 
 ## Examples
 
-### Select without parameters
+### Selection without parameters
 ```csharp
 using Bee.SQL;
 
@@ -27,7 +27,7 @@ static void Main(string[] args)
 }
 ```
 
-### Select parameters
+### Selection parameters
 ```csharp
 using Bee.SQL;
 
@@ -43,7 +43,7 @@ static void Main(string[] args)
 }
 ```
 
-### Select row without parameters
+### Selection row without parameters
 ```csharp
 using Bee.SQL;
 
@@ -56,7 +56,7 @@ static void Main(string[] args)
 }
 ```
 
-### Select row with parameters
+### Selection row with parameters
 ```csharp
 using Bee.SQL;
 
@@ -69,7 +69,7 @@ static void Main(string[] args)
 }
 ```
 
-### Select value
+### Selection value
 ```csharp
 using Bee.SQL;
 
@@ -82,7 +82,7 @@ static void Main(string[] args)
 }
 ```
 
-### Sample result check
+### Example result check
 ```csharp
 using Bee.SQL;
 
