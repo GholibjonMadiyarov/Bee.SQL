@@ -90,17 +90,16 @@ static void Main(string[] args)
 {
 	SQL.connectionString = "Server=127.0.0.1;Database=db_name;User Id=db_user;Password=db_password;Connection Timeout=15";
 	var result = SQL.select("select id, name, lastname, age from users");
-	
-	if(result.execute)
-	{
-		foreach(var row in result.data)
-		{
-			Console.WriteLine("id:" + row["id"] + ", name:" + row["name"] + ", lastname:" + row["lastname"] + ", age:" + row["age"]);
-		}
-	}
-	else
+
+	if(!result.execute)
 	{
 		Console.WriteLine("No result! " + result.message);
+		return;
+	}
+
+	foreach(var row in result.data)
+	{
+		Console.WriteLine("id:" + row["id"] + ", name:" + row["name"] + ", lastname:" + row["lastname"] + ", age:" + row["age"]);
 	}
 }
 ```
@@ -117,11 +116,10 @@ static void Main(string[] args)
 	if(result.execute)
 	{
 		Console.WriteLine("Request completed successfully " + result.message);
+		return;
 	}
-	else
-	{
-		Console.WriteLine("Request failed " + result.message);
-	}
+
+	Console.WriteLine("Request failed " + result.message);
 }
 ```
 
