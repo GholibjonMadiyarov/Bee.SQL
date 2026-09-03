@@ -10,6 +10,7 @@ namespace Bee.SQL.Models
         public bool duplicate { get; set; }
         public bool exception { get; set; }
         public string exceptionType { get; set; }
+        public int? exceptionNumber { get; set; }
 
         public Insert() 
         {
@@ -19,6 +20,7 @@ namespace Bee.SQL.Models
             duplicate = false;
             exception = false;
             exceptionType = null;
+            exceptionNumber = null;
         }
     }
 }

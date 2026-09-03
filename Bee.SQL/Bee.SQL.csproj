@@ -40,6 +40,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Log.cs" />
     <Compile Include="Models\Insert.cs" />
     <Compile Include="Models\Delete.cs" />
     <Compile Include="Models\ExecuteSelect.cs" />

@@ -4,110 +4,30 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
 using System.Diagnostics;
+using System.Reflection;
 
 namespace Bee.SQL
 {
     public class SQL
     {
         public static string connectionString = "Server=127.0.0.1;Database=Test;User Id=TestUser;Password=TestPassword;Connection Timeout=15";
+        public static string logPath = null;
 
-        /// <summary>
-        /// Used to retrieve all rows from a table.
-        /// </summary>
-        /// <param name="tableName">Table name.</param>
-        /// <param name="limit">Limit.</param>
-        /// <returns> Select model </returns>
-        //public static Select select(string tableName, int? limit = null)
-        //{
-        //    try
-        //    {
-        //        List<Dictionary<string, object>> rows = new List<Dictionary<string, object>>();
+        public void version(string path = null)
+        {
+            if (path != null)
+            {
+                Log.info(path, "Version:" + Assembly.GetExecutingAssembly()?.GetName()?.Version?.ToString());
+            }
+        }
 
-        //        using (SqlConnection connection = new SqlConnection(connectionString))
-        //        {
-        //            connection.Open();
-
-        //            using (SqlCommand command = new SqlCommand())
-        //            {
-        //                command.Connection = connection;
-        //                command.CommandType = CommandType.Text;
-        //                command.CommandText = "select " + limit == null ? "" : " top @limit " + " * from @table";
-
-        //                command.Parameters.AddWithValue("@table", tableName);
-        //                command.Parameters.AddWithValue("@limit", limit);
-
-        //                using (SqlDataReader reader = command.ExecuteReader())
-        //                {
-        //                    while (reader.Read())
-        //                    {
-        //                        Dictionary<string, object> row = new Dictionary<string, object>();
-
-        //                        for (int i = 0; i <= reader.FieldCount - 1; i++)
-        //                        {
-        //                            row[reader.GetName(i)] = reader.IsDBNull(i) ? null : reader[reader.GetName(i)];
-        //                        }
-
-        //                        rows.Add(row);
-        //                    }
-        //                }
-        //            }
-        //        }
-
-        //        return new Select { execute = true, message = "Request completed successfully", data = rows };
-        //    }
-        //    catch (Exception e)
-        //    {
-        //        return new Select { execute = false, message = "Request failed. " + e.Message, data = new List<Dictionary<string, object>>() };
-        //    }
-        //}
-
-        ///// <summary>
-        ///// Used to retrieve all rows from a table.
-        ///// </summary>
-        ///// <param name="tableName">Table name.</param>
-        ///// <returns> Select model </returns>
-        //public static Select select(string tableName)
-        //{
-        //    try
-        //    {
-        //        List<Dictionary<string, object>> rows = new List<Dictionary<string, object>>();
-
-        //        using (SqlConnection connection = new SqlConnection(connectionString))
-        //        {
-        //            connection.Open();
-
-        //            using (SqlCommand command = new SqlCommand())
-        //            {
-        //                command.Connection = connection;
-        //                command.CommandType = CommandType.Text;
-        //                command.CommandText = "select * from @table" ;
-
-        //                command.Parameters.AddWithValue("@table", tableName);
-
-        //                using (SqlDataReader reader = command.ExecuteReader())
-        //                {
-        //                    while (reader.Read())
-        //                    {
-        //                        Dictionary<string, object> row = new Dictionary<string, object>();
-
-        //                        for (int i = 0; i <= reader.FieldCount - 1; i++)
-        //                        {
-        //                            row[reader.GetName(i)] = reader.IsDBNull(i) ? null : reader[reader.GetName(i)];
-        //                        }
-
-        //                        rows.Add(row);
-        //                    }
-        //                }
-        //            }
-        //        }
-
-        //        return new Select { execute = true, message = "Request completed successfully", data = rows };
-        //    }
-        //    catch (Exception e)
-        //    {
-        //        return new Select { execute = false, message = "Request failed. " + e.Message, data = new List<Dictionary<string, object>>() };
-        //    }
-        //}
+        public void version()
+        {
+            if (logPath != null)
+            {
+                Log.info(logPath, "Version:" + Assembly.GetExecutingAssembly()?.GetName()?.Version?.ToString());
+            }
+        }
 
         /// <summary>
         /// Used to retrieve data from a database.
@@ -150,7 +70,7 @@ namespace Bee.SQL
 
                                 for (int i = 0; i <= reader.FieldCount - 1; i++)
                                 {
-                                    if (reader.IsDBNull(i))
+                                    if (reader.IsDBNull(i) || reader.GetValue(i).Equals(null) || reader.GetValue(i) == null)
                                     {
                                         row[reader.GetName(i)] = null;
                                     }
@@ -215,7 +135,7 @@ namespace Bee.SQL
 
                                 for (int i = 0; i <= reader.FieldCount - 1; i++)
                                 {
-                                    if (reader.IsDBNull(i))
+                                    if (reader.IsDBNull(i) || reader.GetValue(i).Equals(null) || reader.GetValue(i) == null)
                                     {
                                         row[reader.GetName(i)] = null;
                                     }
@@ -231,11 +151,11 @@ namespace Bee.SQL
                     }
                 }
 
-                return new SelectString { execute = true, message = "Request completed successfully", data = rows };
+                return new SelectString { execute = true, message = "Request completed successfully", query = queryText, data = rows };
             }
             catch (Exception e)
             {
-                return new SelectString { execute = false, message = "Request failed. " + e.Message, data = new List<Dictionary<string, string>>() };
+                return new SelectString { execute = false, message = "Request failed. " + e.Message, query = queryText, data = new List<Dictionary<string, string>>() };
             }
         }
 
@@ -277,7 +197,7 @@ namespace Bee.SQL
                             {
                                 for (int i = 0; i <= reader.FieldCount - 1; i++)
                                 {
-                                    if (reader.IsDBNull(i))
+                                    if (reader.IsDBNull(i) || reader.GetValue(i).Equals(null) || reader.GetValue(i) == null)
                                     {
                                         row[reader.GetName(i)] = null;
                                     }
@@ -339,7 +259,7 @@ namespace Bee.SQL
                             {
                                 for (int i = 0; i <= reader.FieldCount - 1; i++)
                                 {
-                                    if (reader.IsDBNull(i))
+                                    if (reader.IsDBNull(i) || reader.GetValue(i).Equals(null) || reader.GetValue(i) == null)
                                     {
                                         row[reader.GetName(i)] = null;
                                     }
@@ -496,7 +416,7 @@ namespace Bee.SQL
                         {
                             if (reader.Read())
                             {
-                                if (reader.IsDBNull(0))
+                                if (reader.IsDBNull(0) || reader.GetValue(0).Equals(null) || reader.GetValue(0) == null)
                                 {
                                     return new SelectValueInteger { execute = true, message = "Request completed successfully", value = null, read = true };
                                 }
@@ -552,7 +472,7 @@ namespace Bee.SQL
                         {
                             if (reader.Read())
                             {
-                                if (reader.IsDBNull(0))
+                                if (reader.IsDBNull(0) || reader.GetValue(0).Equals(null) || reader.GetValue(0) == null)
                                 {
                                     return new SelectValueDouble { execute = true, message = "Request completed successfully", value = null, read = true };
                                 }
@@ -629,7 +549,7 @@ namespace Bee.SQL
                         catch (SqlException e)
                         {
                             transaction.Rollback();
-                            return new Insert { execute = false, message = "SqlException. Transaction canceled. " + e.Message, duplicate = (e.Number == 2601 || e.Number == 2627) ? true : false, exception = true };
+                            return new Insert { execute = false, message = "SqlException. Transaction canceled. " + e.Message, duplicate = (e.Number == 2601 || e.Number == 2627) ? true : false, exception = true, exceptionType = "SQLException", exceptionNumber = e.Number};
                         }
                         catch (Exception e)
                         {
@@ -667,6 +587,7 @@ namespace Bee.SQL
                             {
                                 command.Connection = connection;
                                 command.CommandType = CommandType.Text;
+                                command.Transaction = transaction;
                                 command.CommandText = queryText + "; SELECT SCOPE_IDENTITY()";
 
                                 if (parameters != null)
@@ -679,8 +600,6 @@ namespace Bee.SQL
                                             command.Parameters.AddWithValue(parameter.Key, parameter.Value);
                                     }
                                 }
-
-                                command.Transaction = transaction;
 
                                 var r = command.ExecuteScalar();
 
@@ -698,7 +617,7 @@ namespace Bee.SQL
                         catch (SqlException e)
                         {
                             transaction.Rollback();
-                            return new Insert { execute = false, message = "SqlException. Transaction canceled. " + e.Message, duplicate = (e.Number == 2601 || e.Number == 2627) ? true : false, exception = true };
+                            return new Insert { execute = false, message = "SqlException. Transaction canceled. " + e.Message, duplicate = (e.Number == 2601 || e.Number == 2627) ? true : false, exception = true, exceptionType = "SQLException", exceptionNumber = e.Number};
                         }
                         catch (Exception e)
                         {
@@ -739,9 +658,13 @@ namespace Bee.SQL
                             foreach (var parameter in parameters)
                             {
                                 if (parameter.Value == null)
+                                {
                                     command.Parameters.AddWithValue(parameter.Key, DBNull.Value);
+                                }
                                 else
+                                {
                                     command.Parameters.AddWithValue(parameter.Key, parameter.Value);
+                                }
                             }
                         }
 
@@ -759,6 +682,82 @@ namespace Bee.SQL
             catch (Exception e)
             {
                 return new Update { execute = false, message = "Request failed. " + e.Message };
+            }
+        }
+
+        /// <summary>
+        /// Executes update requests.
+        /// </summary>
+        /// <param name="queryTexts">The SQL query.</param>
+        /// <param name="parameters">Parameters.</param>
+        /// <returns>Update model</returns>
+        public static Update update(List<string> queryTexts, List<Dictionary<string, object>> parameters = null)
+        {
+            try
+            {
+                using (SqlConnection connection = new SqlConnection(connectionString))
+                {
+                    connection.Open();
+
+                    int index = 0;
+                    int affectedRowCount = 0;
+
+                    using (SqlTransaction transaction = connection.BeginTransaction())
+                    {
+                        try
+                        {
+                            using (SqlCommand command = new SqlCommand())
+                            {
+                                command.Connection = connection;
+                                command.Transaction = transaction;
+                                command.CommandType = CommandType.Text;
+
+                                while (index <= queryTexts.Count - 1)
+                                {
+                                    command.CommandText = queryTexts[index];
+
+                                    command.Parameters.Clear();
+
+                                    if (parameters != null && parameters.Count > 0)
+                                    {
+                                        if (parameters[index] != null)
+                                        {
+                                            foreach (var parameter in parameters[index])
+                                            {
+                                                command.Parameters.AddWithValue(parameter.Key, parameter.Value != null ? parameter.Value : DBNull.Value);
+                                            }
+                                        }
+                                    }
+
+                                    int i = command.ExecuteNonQuery();
+
+                                    index++;
+
+                                    affectedRowCount += i;
+                                }
+
+                                transaction.Commit();
+
+                                return new Update { execute = true, message = "Request completed successfully", affectedRowCount = affectedRowCount};
+                            }
+                        }
+                        catch (SqlException e)
+                        {
+                            transaction.Rollback();
+
+                            return new Update { execute = false, message = "SqlException. Transaction canceled. " + e.Message, exception = true, queryText = queryTexts?[index], parameter = parameters?[index] };
+                        }
+                        catch (Exception e)
+                        {
+                            transaction.Rollback();
+                            return new Update { execute = false, message = "Exception. Transaction canceled. " + e.Message, exception = true, queryText = queryTexts?[index], parameter = parameters?[index] };
+                        }
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                return new Update { execute = false, message = "Exception. Request failed. " + e.Message, exception = true };
             }
         }
 
@@ -872,6 +871,8 @@ namespace Bee.SQL
                                 command.Connection = connection;
                                 command.CommandType = CommandType.Text;
 
+                                command.Transaction = transaction;
+
                                 int index = 0;
                                 while (index <= queryTexts.Count - 1)
                                 {
@@ -893,7 +894,6 @@ namespace Bee.SQL
                                         }
                                     }
 
-                                    command.Transaction = transaction;
                                     command.ExecuteNonQuery();
                                     index++;
                                 }
