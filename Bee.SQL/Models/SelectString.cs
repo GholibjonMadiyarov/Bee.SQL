@@ -6,12 +6,14 @@ namespace Bee.SQL.Models
     {
         public bool execute { get; set; }
         public string message { get; set; }
+        public string query { get; set; }
         public List<Dictionary<string, string>> data { get; set; }
 
         public SelectString() 
         {
             execute = false;
             message = null;
+            query = null;
             data = new List<Dictionary<string, string>>();
         }
     }
