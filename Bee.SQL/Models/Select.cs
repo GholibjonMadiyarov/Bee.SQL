@@ -6,6 +6,8 @@ namespace Bee.SQL.Models
     {
         public bool execute { get; set; }
         public string message { get; set; }
+        public string stackTrace { get; set; }
+        public string queryText { get; set; }
         public bool exception { get; set; }
         public List<Dictionary<string, object>> data { get; set; }
 
@@ -13,6 +15,8 @@ namespace Bee.SQL.Models
         {
             execute = false;
             message = null;
+            stackTrace = null;
+            queryText = null;
             exception = false;
             data = new List<Dictionary<string, object>>();
         }
