@@ -4,31 +4,24 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
 using System.Globalization;
-using System.Linq;
 using System.Reflection;
-using System.Xml.Linq;
 
 namespace Bee.SQL
 {
-    /// <summary>
-    /// Simple static helpers for working with a SQL Server database.
-    /// </summary>
-    /// <remarks>
-    /// Every method opens its own connection, runs the query and closes the connection.
-    /// Methods do not throw: on any error they return a result with <c>execute = false</c>
-    /// and the error text in <c>message</c>.
-    /// Parameter values that are <c>null</c> are sent as SQL <c>NULL</c>.
-    /// </remarks>
+    /// <summary>Static methods for working with a SQL Server database. Methods do not throw: errors are returned in the result object.</summary>
     public class SQL
     {
-        /// <summary>Connection string used by every method. Set it once at application start.</summary>
+        /// <summary>Connection string used by all methods.</summary>
         public static string connectionString = "Server=127.0.0.1;Database=Test;User Id=TestUser;Password=TestPassword;Connection Timeout=15";
 
-        /// <summary>Path of the log file used by <see cref="version()"/>. <c>null</c> turns logging off.</summary>
+        /// <summary>Log file path used by <see cref="version()"/>. Null disables logging.</summary>
         public static string logPath = null;
 
-        /// <summary>Writes the library version to the log file at <paramref name="path"/>. Does nothing if the path is <c>null</c>.</summary>
-        /// <param name="path">Log file path.</param>
+        /// <summary>Command timeout in seconds for all methods. 0 means no limit. Default is 30.</summary>
+        public static int commandTimeout = 30;
+
+        /// <summary>Writes the library version to a log file.</summary>
+        /// <param name="path">Log file path. If null, nothing is written.</param>
         public static void version(string path = null)
         {
             if (path != null)
@@ -37,7 +30,7 @@ namespace Bee.SQL
             }
         }
 
-        /// <summary>Writes the library version to <see cref="logPath"/>. Does nothing if <see cref="logPath"/> is <c>null</c>.</summary>
+        /// <summary>Writes the library version to <c>logPath</c>. If <c>logPath</c> is null, nothing is written.</summary>
         public static void version()
         {
             if (logPath != null)
@@ -47,12 +40,9 @@ namespace Bee.SQL
         }
 
         /// <summary>Runs a SELECT query and returns all rows.</summary>
-        /// <param name="queryText">SQL query, for example <c>SELECT id, name FROM users WHERE age &gt; @age</c>.</param>
-        /// <param name="parameters">Parameters (name → value), for example <c>{ "@age", 18 }</c>. May be <c>null</c>.</param>
-        /// <returns>
-        /// <c>data</c>: list of rows; each row is a dictionary (column name → value). SQL <c>NULL</c> becomes <c>null</c>.
-        /// The list is empty if no rows were found or the query failed (<c>execute = false</c>).
-        /// </returns>
+        /// <param name="queryText">SQL query.</param>
+        /// <param name="parameters">Parameters (name → value). A null value is sent as NULL.</param>
+        /// <returns><c>data</c>: rows as "column → value"; NULL becomes null.</returns>
         public static Select select(string queryText, Dictionary<string, object> parameters = null)
         {
             try
@@ -63,15 +53,13 @@ namespace Bee.SQL
                 {
                     connection.Open();
 
-                    using (SqlCommand command = new SqlCommand())
+                    using (SqlCommand command = new SqlCommand(queryText, connection))
                     {
-                        command.Connection = connection;
-                        command.CommandType = CommandType.Text;
-                        command.CommandText = queryText;
+                        command.CommandTimeout = commandTimeout;
 
-                        if (parameters != null && parameters.Count > 0)
+                        if (parameters != null)
                         {
-                            foreach (KeyValuePair<string, object> parameter in parameters)
+                            foreach (var parameter in parameters)
                             {
                                 command.Parameters.AddWithValue(parameter.Key, parameter.Value ?? DBNull.Value);
                             }
@@ -83,18 +71,9 @@ namespace Bee.SQL
                             {
                                 var row = new Dictionary<string, object>();
 
-                                for (int i = 0; i <= reader.FieldCount - 1; i++)
+                                for (int i = 0; i < reader.FieldCount; i++)
                                 {
-                                    // Check if the value is null or DBNull and assign null to the dictionary if it is
-                                    if (reader.IsDBNull(i) || reader.GetValue(i).Equals(null) || reader.GetValue(i) == null)
-                                    {
-                                        row[reader.GetName(i)] = null;
-                                    }
-                                    else
-                                    {
-                                        // Assign the value to the dictionary if it is not null
-                                        row[reader.GetName(i)] = reader.GetValue(i);
-                                    }
+                                    row[reader.GetName(i)] = reader.IsDBNull(i) ? null : reader.GetValue(i);
                                 }
 
                                 rows.Add(row);
@@ -103,41 +82,35 @@ namespace Bee.SQL
                     }
                 }
 
-                return new Select { execute = true, message = "Request completed successfully", data = rows };
+                return new Select { execute = true, message = "Request completed successfully", queryText = queryText, data = rows };
             }
-            catch(Exception e)
+            catch (Exception e)
             {
-                return new Select { execute = false, message = "Request failed. " + e.Message, exception = true, data = new List<Dictionary<string, object>>() };
+                return new Select { execute = false, message = "Request failed. " + e.Message, stackTrace = e.StackTrace, exception = true, queryText = queryText };
             }
         }
 
-        /// <summary>Runs a SELECT query and returns all rows with every value converted to a string.</summary>
+        /// <summary>Runs a SELECT query and returns all rows with values converted to strings.</summary>
         /// <param name="queryText">SQL query.</param>
-        /// <param name="parameters">Parameters (name → value). May be <c>null</c>.</param>
-        /// <returns>
-        /// <c>data</c>: list of rows; each row is a dictionary (column name → text). Numbers and dates are converted
-        /// with the invariant culture (for example <c>1.5</c>, not <c>1,5</c>). SQL <c>NULL</c> becomes <c>null</c>.
-        /// <c>query</c>: the query text.
-        /// </returns>
+        /// <param name="parameters">Parameters (name → value). A null value is sent as NULL.</param>
+        /// <returns><c>data</c>: rows as "column → string" (invariant culture: <c>1.5</c>, not <c>1,5</c>; dates as <c>MM/dd/yyyy HH:mm:ss</c>); NULL becomes null.</returns>
         public static SelectString selectString(string queryText, Dictionary<string, object> parameters = null)
         {
             try
             {
-                List<Dictionary<string, string>> rows = new List<Dictionary<string, string>>();
+                var rows = new List<Dictionary<string, string>>();
 
                 using (SqlConnection connection = new SqlConnection(connectionString))
                 {
                     connection.Open();
 
-                    using (SqlCommand command = new SqlCommand())
+                    using (SqlCommand command = new SqlCommand(queryText, connection))
                     {
-                        command.Connection = connection;
-                        command.CommandType = CommandType.Text;
-                        command.CommandText = queryText;
+                        command.CommandTimeout = commandTimeout;
 
-                        if (parameters != null && parameters.Count > 0)
+                        if (parameters != null)
                         {
-                            foreach (KeyValuePair<string, object> parameter in parameters)
+                            foreach (var parameter in parameters)
                             {
                                 command.Parameters.AddWithValue(parameter.Key, parameter.Value ?? DBNull.Value);
                             }
@@ -147,18 +120,11 @@ namespace Bee.SQL
                         {
                             while (reader.Read())
                             {
-                                Dictionary<string, string> row = new Dictionary<string, string>();
+                                var row = new Dictionary<string, string>();
 
-                                for (int i = 0; i <= reader?.FieldCount - 1; i++)
+                                for (int i = 0; i < reader.FieldCount; i++)
                                 {
-                                    if (reader.IsDBNull(i) || reader.GetValue(i).Equals(null) || reader.GetValue(i) == null)
-                                    {
-                                        row[reader?.GetName(i)] = null;
-                                    }
-                                    else
-                                    {
-                                        row[reader?.GetName(i)] = Convert.ToString(reader?.GetValue(i), CultureInfo.InvariantCulture);
-                                    }
+                                    row[reader.GetName(i)] = reader.IsDBNull(i) ? null : Convert.ToString(reader.GetValue(i), CultureInfo.InvariantCulture);
                                 }
 
                                 rows.Add(row);
@@ -171,17 +137,14 @@ namespace Bee.SQL
             }
             catch (Exception e)
             {
-                return new SelectString { execute = false, message = "Request failed. " + e.Message, query = queryText, data = new List<Dictionary<string, string>>() };
+                return new SelectString { execute = false, message = "Request failed. " + e.Message, stackTrace = e.StackTrace, query = queryText };
             }
         }
 
-        /// <summary>Runs a SELECT query and returns only the first row.</summary>
+        /// <summary>Runs a SELECT query and returns the first row. Add <c>TOP 1</c> to the query: other rows are still read to the end.</summary>
         /// <param name="queryText">SQL query.</param>
-        /// <param name="parameters">Parameters (name → value). May be <c>null</c>.</param>
-        /// <returns>
-        /// <c>data</c>: the first row (column name → value); empty if no row was found.
-        /// <c>read</c>: <c>true</c> if a row was found.
-        /// </returns>
+        /// <param name="parameters">Parameters (name → value). A null value is sent as NULL.</param>
+        /// <returns><c>data</c>: first row as "column → value". <c>read</c> is false if there are no rows.</returns>
         public static SelectRow selectRow(string queryText, Dictionary<string, object> parameters = null)
         {
             try
@@ -191,13 +154,12 @@ namespace Bee.SQL
                 using (SqlConnection connection = new SqlConnection(connectionString))
                 {
                     connection.Open();
-                    using (SqlCommand command = new SqlCommand())
-                    {
-                        command.Connection = connection;
-                        command.CommandType = CommandType.Text;
-                        command.CommandText = queryText;
 
-                        if (parameters != null && parameters.Count > 0)
+                    using (SqlCommand command = new SqlCommand(queryText, connection))
+                    {
+                        command.CommandTimeout = commandTimeout;
+
+                        if (parameters != null)
                         {
                             foreach (var parameter in parameters)
                             {
@@ -209,16 +171,9 @@ namespace Bee.SQL
                         {
                             if (reader.Read())
                             {
-                                for (int i = 0; i <= reader.FieldCount - 1; i++)
+                                for (int i = 0; i < reader.FieldCount; i++)
                                 {
-                                    if (reader.IsDBNull(i) || reader.GetValue(i).Equals(null) || reader.GetValue(i) == null)
-                                    {
-                                        row[reader.GetName(i)] = null;
-                                    }
-                                    else
-                                    {
-                                        row[reader.GetName(i)] = reader.GetValue(i);
-                                    }
+                                    row[reader.GetName(i)] = reader.IsDBNull(i) ? null : reader.GetValue(i);
                                 }
 
                                 return new SelectRow { execute = true, message = "Request completed successfully", data = row, read = true };
@@ -227,21 +182,18 @@ namespace Bee.SQL
                     }
                 }
 
-                return new SelectRow { execute = true, message = "Request completed successfully", data = row, read = false };
+                return new SelectRow { execute = true, message = "The request was successful, but no result was returned", data = row, read = false };
             }
-            catch(Exception e)
+            catch (Exception e)
             {
-                return new SelectRow { execute = false, message = "Request failed. " + e.Message , data = new Dictionary<string, object>(), read = false, exception = true };
+                return new SelectRow { execute = false, message = "Request failed. " + e.Message, stackTrace = e.StackTrace, exception = true };
             }
         }
 
-        /// <summary>Runs a SELECT query and returns only the first row, with every value converted to a string.</summary>
+        /// <summary>Runs a SELECT query and returns the first row with values converted to strings. Add <c>TOP 1</c> to the query.</summary>
         /// <param name="queryText">SQL query.</param>
-        /// <param name="parameters">Parameters (name → value). May be <c>null</c>.</param>
-        /// <returns>
-        /// <c>data</c>: the first row (column name → text, invariant culture); empty if no row was found.
-        /// <c>read</c>: <c>true</c> if a row was found.
-        /// </returns>
+        /// <param name="parameters">Parameters (name → value). A null value is sent as NULL.</param>
+        /// <returns><c>data</c>: first row as "column → string" (invariant culture). <c>read</c> is false if there are no rows.</returns>
         public static SelectRowString selectRowString(string queryText, Dictionary<string, object> parameters = null)
         {
             try
@@ -251,13 +203,12 @@ namespace Bee.SQL
                 using (SqlConnection connection = new SqlConnection(connectionString))
                 {
                     connection.Open();
-                    using (SqlCommand command = new SqlCommand())
-                    {
-                        command.Connection = connection;
-                        command.CommandType = CommandType.Text;
-                        command.CommandText = queryText;
 
-                        if (parameters != null && parameters.Count > 0)
+                    using (SqlCommand command = new SqlCommand(queryText, connection))
+                    {
+                        command.CommandTimeout = commandTimeout;
+
+                        if (parameters != null)
                         {
                             foreach (var parameter in parameters)
                             {
@@ -269,16 +220,9 @@ namespace Bee.SQL
                         {
                             if (reader.Read())
                             {
-                                for (int i = 0; i <= reader.FieldCount - 1; i++)
+                                for (int i = 0; i < reader.FieldCount; i++)
                                 {
-                                    if (reader.IsDBNull(i) || reader.GetValue(i).Equals(null) || reader.GetValue(i) == null)
-                                    {
-                                        row[reader.GetName(i)] = null;
-                                    }
-                                    else
-                                    {
-                                        row[reader.GetName(i)] = Convert.ToString(reader?.GetValue(i), CultureInfo.InvariantCulture);
-                                    }
+                                    row[reader.GetName(i)] = reader.IsDBNull(i) ? null : Convert.ToString(reader.GetValue(i), CultureInfo.InvariantCulture);
                                 }
 
                                 return new SelectRowString { execute = true, message = "Request completed successfully", data = row, read = true };
@@ -287,21 +231,18 @@ namespace Bee.SQL
                     }
                 }
 
-                return new SelectRowString { execute = true, message = "Request completed successfully", data = row, read = false };
+                return new SelectRowString { execute = true, message = "The request was successful, but no result was returned", data = row, read = false };
             }
             catch (Exception e)
             {
-                return new SelectRowString { execute = false, message = "Request failed. " + e.Message, data = new Dictionary<string, string>(), read = false, exception = true };
+                return new SelectRowString { execute = false, message = "Request failed. " + e.Message, stackTrace = e.StackTrace, exception = true };
             }
         }
 
-        /// <summary>Runs a query and returns one value: the first column of the first row.</summary>
-        /// <param name="queryText">SQL query, for example <c>SELECT name FROM users WHERE id = @id</c>.</param>
-        /// <param name="parameters">Parameters (name → value). May be <c>null</c>.</param>
-        /// <returns>
-        /// <c>value</c>: the value, or <c>null</c> if it is SQL <c>NULL</c> or no row was found.
-        /// <c>read</c>: <c>true</c> if a row was found (use it to tell "no row" from "NULL").
-        /// </returns>
+        /// <summary>Runs a query and returns the first column of the first row. Add <c>TOP 1</c> to the query.</summary>
+        /// <param name="queryText">SQL query.</param>
+        /// <param name="parameters">Parameters (name → value). A null value is sent as NULL.</param>
+        /// <returns><c>value</c>: the value, or null for NULL (<c>read</c> is true). <c>read</c> is false if there are no rows.</returns>
         public static SelectValue selectValue(string queryText, Dictionary<string, object> parameters = null)
         {
             try
@@ -310,13 +251,11 @@ namespace Bee.SQL
                 {
                     connection.Open();
 
-                    using (SqlCommand command = new SqlCommand())
+                    using (SqlCommand command = new SqlCommand(queryText, connection))
                     {
-                        command.Connection = connection;
-                        command.CommandType = CommandType.Text;
-                        command.CommandText = queryText;
+                        command.CommandTimeout = commandTimeout;
 
-                        if (parameters != null && parameters.Count > 0)
+                        if (parameters != null)
                         {
                             foreach (var parameter in parameters)
                             {
@@ -334,21 +273,18 @@ namespace Bee.SQL
                     }
                 }
 
-                return new SelectValue { execute = true, message = "The request was successful, but no result was returned", value = null, read = false };
+                return new SelectValue { execute = true, message = "The request was successful, but no result was returned", read = false };
             }
-            catch(Exception e)
+            catch (Exception e)
             {
-                return new SelectValue { execute = false, message = "Request failed. " + e.Message, value = null, read = false, exception = true};
+                return new SelectValue { execute = false, message = "Request failed. " + e.Message, stackTrace = e.StackTrace, exception = true };
             }
         }
 
-        /// <summary>Runs a query and returns the first column of the first row as a string (invariant culture).</summary>
+        /// <summary>Runs a query and returns the first column of the first row as a string. Add <c>TOP 1</c> to the query.</summary>
         /// <param name="queryText">SQL query.</param>
-        /// <param name="parameters">Parameters (name → value). May be <c>null</c>.</param>
-        /// <returns>
-        /// <c>value</c>: the value as text, or <c>null</c> if it is SQL <c>NULL</c> or no row was found.
-        /// <c>read</c>: <c>true</c> if a row was found.
-        /// </returns>
+        /// <param name="parameters">Parameters (name → value). A null value is sent as NULL.</param>
+        /// <returns><c>value</c>: the value as string (invariant culture), or null for NULL (<c>read</c> is true). <c>read</c> is false if there are no rows.</returns>
         public static SelectValueString selectValueString(string queryText, Dictionary<string, object> parameters = null)
         {
             try
@@ -357,13 +293,11 @@ namespace Bee.SQL
                 {
                     connection.Open();
 
-                    using (SqlCommand command = new SqlCommand())
+                    using (SqlCommand command = new SqlCommand(queryText, connection))
                     {
-                        command.Connection = connection;
-                        command.CommandType = CommandType.Text;
-                        command.CommandText = queryText;
+                        command.CommandTimeout = commandTimeout;
 
-                        if (parameters != null && parameters.Count > 0)
+                        if (parameters != null)
                         {
                             foreach (var parameter in parameters)
                             {
@@ -375,35 +309,24 @@ namespace Bee.SQL
                         {
                             if (reader.Read())
                             {
-                                return new SelectValueString { 
-                                    execute = true, 
-                                    message = "Request completed successfully", 
-                                    value = reader.IsDBNull(0) ? null : Convert.ToString(reader?.GetValue(0), 
-                                    CultureInfo.InvariantCulture), 
-                                    read = true 
-                                };
+                                return new SelectValueString { execute = true, message = "Request completed successfully", value = reader.IsDBNull(0) ? null : Convert.ToString(reader.GetValue(0), CultureInfo.InvariantCulture), read = true };
                             }
                         }
                     }
                 }
 
-                return new SelectValueString { execute = true, message = "The request was successful, but no result was returned", value = null, read = false };
+                return new SelectValueString { execute = true, message = "The request was successful, but no result was returned", read = false };
             }
             catch (Exception e)
             {
-                return new SelectValueString { execute = false, message = "Request failed. " + e.Message, value = null, read = false, exception = true };
+                return new SelectValueString { execute = false, message = "Request failed. " + e.Message, stackTrace = e.StackTrace, exception = true };
             }
         }
 
-        /// <summary>Runs a query and returns the first column of the first row as an <see cref="int"/>, for example <c>SELECT COUNT(*) FROM users</c>.</summary>
+        /// <summary>Runs a query and returns the first column of the first row as an int. Add <c>TOP 1</c> to the query.</summary>
         /// <param name="queryText">SQL query.</param>
-        /// <param name="parameters">Parameters (name → value). May be <c>null</c>.</param>
-        /// <returns>
-        /// <c>value</c>: the number, or <c>null</c> if it is SQL <c>NULL</c> or no row was found.
-        /// <c>read</c>: <c>true</c> if a row was found.
-        /// If the value does not fit in <see cref="int"/> (for example a large BIGINT) or is not a number,
-        /// <c>execute</c> is <c>false</c>.
-        /// </returns>
+        /// <param name="parameters">Parameters (name → value). A null value is sent as NULL.</param>
+        /// <returns><c>value</c>: the value converted with Convert.ToInt32 (any number type or numeric text; 2.5 → 2, 3.5 → 4). NULL or no rows: <c>value</c> is null and <c>read</c> is false. A value outside the int range or non-numeric text returns <c>execute</c> = false.</returns>
         public static SelectValueInteger selectValueInteger(string queryText, Dictionary<string, object> parameters = null)
         {
             try
@@ -412,13 +335,11 @@ namespace Bee.SQL
                 {
                     connection.Open();
 
-                    using (SqlCommand command = new SqlCommand())
+                    using (SqlCommand command = new SqlCommand(queryText, connection))
                     {
-                        command.Connection = connection;
-                        command.CommandType = CommandType.Text;
-                        command.CommandText = queryText;
-
-                        if (parameters != null && parameters.Count > 0)
+                        command.CommandTimeout = commandTimeout;
+    
+                        if (parameters != null)
                         {
                             foreach (var parameter in parameters)
                             {
@@ -430,32 +351,29 @@ namespace Bee.SQL
                         {
                             if (reader.Read())
                             {
-                                if (reader.IsDBNull(0) || reader.GetValue(0).Equals(null) || reader.GetValue(0) == null)
+                                if(reader.IsDBNull(0))
                                 {
-                                    return new SelectValueInteger { execute = true, message = "Request completed successfully", value = null, read = true };
+                                    return new SelectValueInteger { execute = true, message = "The request was successful, but no result was returned", value = null, read = false };
                                 }
                                 
-                                return new SelectValueInteger { execute = true, message = "Request completed successfully", value = Convert.ToInt32(reader.GetValue(0)), read = true };
+                                return new SelectValueInteger { execute = true, message = "Request completed successfully", value = Convert.ToInt32(reader.GetValue(0), CultureInfo.InvariantCulture), read = true };
                             }
                         }
                     }
                 }
 
-                return new SelectValueInteger { execute = true, message = "The request was successful, but no result was returned", value = null, read = false };
+                return new SelectValueInteger { execute = true, message = "The request was successful, but no result was returned", read = false };
             }
             catch (Exception e)
             {
-                return new SelectValueInteger { execute = false, message = "Request failed. " + e.Message, value = null, read = false, exception = true };
+                return new SelectValueInteger { execute = false, message = "Request failed. " + e.Message, stackTrace = e.StackTrace, exception = true };
             }
         }
 
-        /// <summary>Runs a query and returns the first column of the first row as a <see cref="double"/>, for example <c>SELECT AVG(price) FROM products</c>.</summary>
+        /// <summary>Runs a query and returns the first column of the first row as a double. Add <c>TOP 1</c> to the query.</summary>
         /// <param name="queryText">SQL query.</param>
-        /// <param name="parameters">Parameters (name → value). May be <c>null</c>.</param>
-        /// <returns>
-        /// <c>value</c>: the number, or <c>null</c> if it is SQL <c>NULL</c> or no row was found.
-        /// <c>read</c>: <c>true</c> if a row was found. If the value is not a number, <c>execute</c> is <c>false</c>.
-        /// </returns>
+        /// <param name="parameters">Parameters (name → value). A null value is sent as NULL.</param>
+        /// <returns><c>value</c>: the value converted with Convert.ToDouble (any number type or numeric text with a dot). NULL or no rows: <c>value</c> is null and <c>read</c> is false. Non-numeric text returns <c>execute</c> = false.</returns>
         public static SelectValueDouble selectValueDouble(string queryText, Dictionary<string, object> parameters = null)
         {
             try
@@ -464,13 +382,11 @@ namespace Bee.SQL
                 {
                     connection.Open();
 
-                    using (SqlCommand command = new SqlCommand())
+                    using (SqlCommand command = new SqlCommand(queryText, connection))
                     {
-                        command.Connection = connection;
-                        command.CommandType = CommandType.Text;
-                        command.CommandText = queryText;
+                        command.CommandTimeout = commandTimeout;
 
-                        if (parameters != null && parameters.Count > 0)
+                        if (parameters != null)
                         {
                             foreach (var parameter in parameters)
                             {
@@ -482,184 +398,111 @@ namespace Bee.SQL
                         {
                             if (reader.Read())
                             {
-                                if (reader.IsDBNull(0) || reader.GetValue(0).Equals(null) || reader.GetValue(0) == null)
+                                if(reader.IsDBNull(0))
                                 {
-                                    return new SelectValueDouble { 
-                                        execute = true, 
-                                        message = "Request completed successfully", 
-                                        value = null, 
-                                        read = true 
-                                    };
+                                    return new SelectValueDouble { execute = true, message = "The request was successful, but no result was returned", value = null, read = false };
                                 }
 
-                                return new SelectValueDouble { 
-                                    execute = true, 
-                                    message = "Request completed successfully", 
-                                    value = Convert.ToDouble(reader.GetValue(0), 
-                                    CultureInfo.InvariantCulture), 
-                                    read = true 
-                                };
+                                return new SelectValueDouble { execute = true, message = "Request completed successfully", value = Convert.ToDouble(reader.GetValue(0), CultureInfo.InvariantCulture), read = true };
                             }
                         }
                     }
                 }
 
-                return new SelectValueDouble { execute = true, message = "The request was successful, but no result was returned", value = null, read = false };
+                return new SelectValueDouble { execute = true, message = "The request was successful, but no result was returned", read = false };
             }
             catch (Exception e)
             {
-                return new SelectValueDouble { execute = false, message = "Request failed. " + e.Message, value = null, read = false, exception = true };
+                return new SelectValueDouble { execute = false, message = "Request failed. " + e.Message, stackTrace = e.StackTrace, exception = true };
             }
         }
 
-        /// <summary>Runs one INSERT statement in a transaction and returns the new id, if the statement returns it.</summary>
-        /// <remarks>
-        /// <para>
-        /// The id is read from the first column of the first returned row. Return it with
-        /// <c>OUTPUT INSERTED.id</c> or <c>; SELECT SCOPE_IDENTITY()</c>. Without them the row is still inserted
-        /// and <c>insertedId</c> is <c>null</c>.
-        /// </para>
-        /// <para>
-        /// The returned id must be a number (INT, BIGINT, or the DECIMAL from <c>SCOPE_IDENTITY()</c>) and must be
-        /// the first column. Otherwise (for example <c>OUTPUT INSERTED.name, INSERTED.id</c> or a UNIQUEIDENTIFIER key)
-        /// the insert is rolled back and <c>execute</c> is <c>false</c>.
-        /// </para>
-        /// <para>
-        /// If the table has enabled triggers, <c>OUTPUT</c> without <c>INTO</c> fails (error 334); use <c>SCOPE_IDENTITY()</c>.
-        /// </para>
-        /// </remarks>
-        /// <param name="queryText">SQL INSERT statement, for example <c>INSERT INTO users(name) OUTPUT INSERTED.id VALUES (@name)</c>.</param>
-        /// <param name="parameters">Parameters (name → value). May be <c>null</c>.</param>
-        /// <returns>
-        /// <c>execute</c>: <c>true</c> if the row was saved.
-        /// <c>insertedId</c>: the new id, or <c>null</c> if the statement returned none.
-        /// <c>duplicate</c>: <c>true</c> on a UNIQUE or PRIMARY KEY violation (SQL errors 2601, 2627).
-        /// <c>exception</c>, <c>exceptionType</c>, <c>exceptionNumber</c>, <c>message</c>: error details.
-        /// </returns>
+        /// <summary>Runs one INSERT statement. The text is sent as is.</summary>
+        /// <param name="queryText">One INSERT statement. To get the new id, add <c>OUTPUT INSERTED.id</c>.</param>
+        /// <param name="parameters">Parameters (name → value). A null value is sent as NULL.</param>
+        /// <returns><c>insertedId</c>: first column of the first OUTPUT row if it is an integer, otherwise null. <c>duplicate</c> is true on a UNIQUE or PRIMARY KEY violation.</returns>
         public static Insert insert(string queryText, Dictionary<string, object> parameters = null)
         {
             try
             {
                 long? insertedId = null;
+                int count;
 
                 using (SqlConnection connection = new SqlConnection(connectionString))
                 {
                     connection.Open();
 
-                    using (SqlTransaction transaction = connection.BeginTransaction())
+                    using (SqlCommand command = new SqlCommand(queryText, connection))
                     {
-                        try
+                        command.CommandTimeout = commandTimeout;
+
+                        if (parameters != null)
                         {
-                            using (SqlCommand command = new SqlCommand())
+                            foreach (var parameter in parameters)
                             {
-                                command.Connection = connection;
-                                command.CommandType = CommandType.Text;
-                                command.Transaction = transaction;
-                                command.CommandText = queryText;
-
-                                if (parameters != null)
-                                {
-                                    foreach (var parameter in parameters)
-                                    {
-                                        command.Parameters.AddWithValue(parameter.Key, parameter.Value ?? DBNull.Value);
-                                    }
-                                }
-
-                                object data = command.ExecuteScalar();
-
-                                if (data != null && data != DBNull.Value)
-                                {
-                                    insertedId = Convert.ToInt64(data);
-                                }
-
-                                transaction.Commit();
-
-                                return new Insert
-                                {
-                                    execute = true,
-                                    message = "Request completed successfully",
-                                    insertedId = insertedId
-                                };
+                                command.Parameters.AddWithValue(parameter.Key, parameter.Value ?? DBNull.Value);
                             }
                         }
-                        catch (SqlException e)
-                        {
-                            transaction?.Rollback();
 
-                            return new Insert
-                            {
-                                execute = false,
-                                message = "Transaction canceled. " + e.Message,
-                                duplicate = (e.Number == 2601 || e.Number == 2627),
-                                exception = true,
-                                exceptionType = e?.GetType()?.Name,
-                                exceptionNumber = e.Number
-                            };
-                        }
-                        catch (Exception e)
+                        using (SqlDataReader reader = command.ExecuteReader())
                         {
-                            transaction?.Rollback();
-
-                            return new Insert
+                            if (reader.FieldCount > 0 && reader.Read())
                             {
-                                execute = false,
-                                message = "Transaction canceled. " + e.Message,
-                                exception = true,
-                                exceptionType = e?.GetType()?.Name
-                            };
+                                object value = reader.GetValue(0);
+
+                                if (value is long || value is int || value is short || value is byte || value is decimal)
+                                {
+                                    insertedId = Convert.ToInt64(value);
+                                }
+                            }
+
+                            while (reader.NextResult()) { }
+
+                            count = reader.RecordsAffected;
                         }
                     }
                 }
+
+                return new Insert
+                {
+                    execute = true,
+                    message = "Request completed successfully",
+                    insertedId = insertedId,
+                    insertedIds = count != 0 ? new List<long?> { insertedId } : new List<long?>()
+                };
+            }
+            catch (SqlException e)
+            {
+                return new Insert { execute = false, message = "Request failed. " + e.Message, stackTrace = e.StackTrace, duplicate = e.Number == 2601 || e.Number == 2627, exception = true, exceptionType = e.GetType().Name, exceptionNumber = e.Number, queryText = queryText, parameter = parameters };
             }
             catch (Exception e)
             {
-                return new Insert { execute = false, message = "Request failed. " + e.Message, exception = true, exceptionType = e?.GetType()?.Name };
+                return new Insert { execute = false, message = "Request failed. " + e.Message, stackTrace = e.StackTrace, exception = true, exceptionType = e.GetType().Name, queryText = queryText, parameter = parameters };
             }
         }
 
-        /// <summary>Runs several INSERT statements in one transaction and returns the new id of each one. If one fails, nothing is saved.</summary>
-        /// <remarks>
-        /// Each id is read the same way as in <see cref="insert(string, Dictionary{string, object})"/>:
-        /// the first column of the first returned row, which must be a number.
-        /// Statements are independent: an id returned by one statement cannot be used in the next one.
-        /// For dependent inserts use one SQL batch with variables.
-        /// </remarks>
-        /// <param name="queryTexts">SQL INSERT statements, run in order. Must not be empty.</param>
-        /// <param name="parameters">
-        /// Parameters for each statement, in the same order (<c>parameters[i]</c> is for <c>queryTexts[i]</c>).
-        /// May be <c>null</c> if no statement has parameters. If set, its count must equal the count of
-        /// <paramref name="queryTexts"/>; use <c>null</c> for a statement without parameters.
-        /// </param>
-        /// <returns>
-        /// <c>execute</c>: <c>true</c> if all statements succeeded and were saved.
-        /// <c>insertedIds[i]</c>: the id returned by statement i, or <c>null</c>.
-        /// <c>queryText</c>: on failure, the statement that failed.
-        /// <c>duplicate</c>, <c>exception</c>, <c>exceptionType</c>, <c>exceptionNumber</c>, <c>message</c>: error details.
-        /// </returns>
+        /// <summary>Runs several INSERT statements in one transaction. If one fails or inserts no rows, all are rolled back.</summary>
+        /// <param name="queryTexts">INSERT statements, run in order. Each item is one statement, sent as is.</param>
+        /// <param name="parameters">Parameters for each query, in the same order. An item may be null.</param>
+        /// <returns><c>insertedIds[i]</c>: first column of the first OUTPUT row of query i if it is an integer, otherwise null. <c>insertedId</c>: the last one. <c>duplicate</c> is true on a UNIQUE or PRIMARY KEY violation. If a query inserts no rows or fails, <c>execute</c> is false and <c>queryText</c>/<c>parameter</c> show that query.</returns>
         public static Insert insert(List<string> queryTexts, List<Dictionary<string, object>> parameters = null)
         {
+            if (queryTexts == null || queryTexts.Count == 0)
+            {
+                return new Insert { execute = false, message = "No queries provided" };
+            }
+
+            if (parameters != null && parameters.Count != queryTexts.Count)
+            {
+                return new Insert { execute = false, message = "The number of parameters does not match the number of queries" };
+            }
+
+            int index = 0;
+
             try
             {
-                if (queryTexts == null || queryTexts.Count == 0)
-                {
-                    return new Insert
-                    {
-                        execute = false,
-                        message = "No queries provided"
-                    };
-                }
-
-                if (parameters != null && parameters.Count != queryTexts.Count)
-                {
-                    return new Insert
-                    {
-                        execute = false,
-                        message = "The number of parameters does not match the number of queries"
-                    };
-                }
-
-                List<long?> insertedIds = new List<long?>();
-                int index = 0;
+                long? insertedId = null;
+                var insertedIds = new List<long?>();
 
                 using (SqlConnection connection = new SqlConnection(connectionString))
                 {
@@ -669,21 +512,13 @@ namespace Bee.SQL
                     {
                         try
                         {
-                            using (SqlCommand command = new SqlCommand())
+                            for (index = 0; index < queryTexts.Count; index++)
                             {
-                                command.Connection = connection;
-                                command.Transaction = transaction;
-
-                                index = 0;
-
-                                while (index < queryTexts.Count)
+                                using (SqlCommand command = new SqlCommand(queryTexts[index], connection, transaction))
                                 {
-                                    command.CommandType =  CommandType.Text;
-                                    command.CommandText = queryTexts[index];
+                                    command.CommandTimeout = commandTimeout;
 
-                                    command.Parameters.Clear();
-
-                                    if (parameters != null && parameters.Count > 0 && parameters[index] != null)
+                                    if (parameters != null && parameters[index] != null)
                                     {
                                         foreach (var parameter in parameters[index])
                                         {
@@ -691,67 +526,91 @@ namespace Bee.SQL
                                         }
                                     }
 
-                                    object insertedId = command.ExecuteScalar();
+                                    long? id = null;
+                                    int count;
 
-                                    if (insertedId != null && insertedId != DBNull.Value)
+                                    using (SqlDataReader reader = command.ExecuteReader())
                                     {
-                                        insertedIds.Add(Convert.ToInt64(insertedId));
-                                    }
-                                    else
-                                    {
-                                        insertedIds.Add(null);
+                                        if (reader.FieldCount > 0 && reader.Read())
+                                        {
+                                            object value = reader.GetValue(0);
+
+                                            if (value is long || value is int || value is short || value is byte || value is decimal)
+                                            {
+                                                id = Convert.ToInt64(value);
+                                            }
+                                        }
+
+                                        while (reader.NextResult()) { }
+
+                                        count = reader.RecordsAffected;
                                     }
 
-                                    index++;
+                                    if (count <= 0)
+                                    {
+                                        transaction.Rollback();
+
+                                        return new Insert
+                                        {
+                                            execute = false,
+                                            message = "Transaction canceled. Query " + (index + 1) + " did not change any rows",
+                                            queryText = queryTexts[index],
+                                            parameter = parameters != null ? parameters[index] : null
+                                        };
+                                    }
+
+                                    insertedId = id;
+                                    insertedIds.Add(id);
                                 }
-
-                                transaction.Commit();
-
-                                return new Insert { execute = true, message = "Request completed successfully", insertedIds = insertedIds };
                             }
-                        }
-                        catch (SqlException e)
-                        {
-                            transaction.Rollback();
 
-                            return new Insert { 
-                                execute = false, 
-                                message = "Transaction canceled. " + e.Message, 
-                                duplicate = (e.Number == 2601 || e.Number == 2627), 
-                                exception = true, exceptionType = e.GetType().Name, 
-                                exceptionNumber = e.Number,
-                                queryText = index < queryTexts.Count ? queryTexts[index] : null
-                            };
-                        }
-                        catch (Exception e)
-                        {
-                            transaction.Rollback();
+                            transaction.Commit();
 
-                            return new Insert { 
-                                execute = false, 
-                                message = "Transaction canceled. " + e.Message, 
-                                exception = true, 
-                                exceptionType = e.GetType().Name,
-                                queryText = index < queryTexts.Count ? queryTexts[index] : null
-                            };
+                            return new Insert { execute = true, message = "Request completed successfully", insertedId = insertedId, insertedIds = insertedIds };
+                        }
+                        catch
+                        {
+                            try { transaction.Rollback(); } catch { }
+
+                            throw;
                         }
                     }
                 }
             }
-            catch(Exception e)
+            catch (SqlException e)
             {
-                return new Insert { execute = false, message = "Request failed. " + e.Message, exception = true, exceptionType = e.GetType().Name };
+                return new Insert
+                {
+                    execute = false,
+                    message = "Transaction canceled. " + e.Message,
+                    stackTrace = e.StackTrace,
+                    duplicate = e.Number == 2601 || e.Number == 2627,
+                    exception = true,
+                    exceptionType = e.GetType().Name,
+                    exceptionNumber = e.Number,
+                    queryText = index < queryTexts.Count ? queryTexts[index] : null,
+                    parameter = parameters != null && index < parameters.Count ? parameters[index] : null
+                };
+            }
+            catch (Exception e)
+            {
+                return new Insert
+                {
+                    execute = false,
+                    message = "Transaction canceled. " + e.Message,
+                    stackTrace = e.StackTrace,
+                    exception = true,
+                    exceptionType = e.GetType().Name,
+                    queryText = index < queryTexts.Count ? queryTexts[index] : null,
+                    parameter = parameters != null && index < parameters.Count ? parameters[index] : null
+                };
             }
         }
 
         /// <summary>Runs one UPDATE statement.</summary>
-        /// <param name="queryText">SQL UPDATE statement, for example <c>UPDATE users SET age = @age WHERE id = @id</c>.</param>
-        /// <param name="parameters">Parameters (name → value). May be <c>null</c>.</param>
-        /// <returns>
-        /// <c>affectedRowCount</c>: number of changed rows.
-        /// <c>execute</c>: <c>true</c> only if at least one row was changed. If no row matched the condition,
-        /// <c>execute</c> is <c>false</c> and <c>exception</c> is <c>false</c>; on an error <c>exception</c> is <c>true</c>.
-        /// </returns>
+        /// <param name="queryText">One UPDATE statement, sent as is.</param>
+        /// <param name="parameters">Parameters (name → value). A null value is sent as NULL.</param>
+        /// <returns><c>affectedRowCount</c>: number of changed rows. If no rows match, <c>execute</c> is false, <c>exception</c> is false and <c>message</c> is "No rows were changed". On an SQL error <c>exception</c> is true.</returns>
         public static Update update(string queryText, Dictionary<string, object> parameters = null)
         {
             try
@@ -760,144 +619,9 @@ namespace Bee.SQL
                 {
                     connection.Open();
 
-                    using (SqlCommand command = new SqlCommand())
+                    using (SqlCommand command = new SqlCommand(queryText, connection))
                     {
-                        command.Connection = connection;
-                        command.CommandType = CommandType.Text;
-                        command.CommandText = queryText;
-
-                        if (parameters != null && parameters.Count > 0 )
-                        {
-                            foreach (var parameter in parameters)
-                            {
-                                command.Parameters.AddWithValue(parameter.Key, parameter.Value ?? DBNull.Value);
-                            }
-                        }
-
-                        int affectedRowCount = command.ExecuteNonQuery();
-
-                        if (affectedRowCount > 0) 
-                        {
-                            return new Update { execute = true, message = "Request completed successfully!", affectedRowCount = affectedRowCount };
-                        }
-
-                        return new Update { execute = false, message = "Request failed!", affectedRowCount = affectedRowCount };
-                    }
-                }
-            }
-            catch (Exception e)
-            {
-                return new Update { execute = false, message = "Request failed. " + e.Message, exception = true};
-            }
-        }
-
-        /// <summary>Runs several UPDATE statements in one transaction. If one fails, nothing is saved.</summary>
-        /// <param name="queryTexts">SQL UPDATE statements, run in order.</param>
-        /// <param name="parameters">
-        /// Parameters for each statement, in the same order. May be <c>null</c>. If set, its count must equal
-        /// the count of <paramref name="queryTexts"/>; use <c>null</c> for a statement without parameters.
-        /// </param>
-        /// <returns>
-        /// <c>execute</c>: <c>true</c> if all statements succeeded (even if some changed no rows).
-        /// <c>affectedRowCount</c>: total number of changed rows.
-        /// <c>queryText</c>, <c>parameter</c>: on failure, the statement that failed and its parameters.
-        /// </returns>
-        public static Update update(List<string> queryTexts, List<Dictionary<string, object>> parameters = null)
-        {
-            try
-            {
-                if (parameters != null && parameters.Count != queryTexts.Count)
-                {
-                    return new Update { execute = false, message = "The number of parameters does not match the number of queries" };
-                }
-
-                using (SqlConnection connection = new SqlConnection(connectionString))
-                {
-                    connection.Open();
-
-                    int index = 0;
-                    int affectedRowCount = 0;
-
-                    using (SqlTransaction transaction = connection.BeginTransaction())
-                    {
-                        try
-                        {
-                            using (SqlCommand command = new SqlCommand())
-                            {
-                                command.Connection = connection;
-                                command.Transaction = transaction;
-                                command.CommandType = CommandType.Text;
-
-                                while (index <= queryTexts.Count - 1)
-                                {
-                                    command.CommandText = queryTexts[index];
-
-                                    command.Parameters.Clear();
-
-                                    if (parameters != null && parameters.Count > 0)
-                                    {
-                                        if (parameters[index] != null)
-                                        {
-                                            foreach (var parameter in parameters[index])
-                                            {
-                                                command.Parameters.AddWithValue(parameter.Key, parameter.Value != null ? parameter.Value : DBNull.Value);
-                                            }
-                                        }
-                                    }
-
-                                    int i = command.ExecuteNonQuery();
-
-                                    index++;
-
-                                    affectedRowCount += i;
-                                }
-
-                                transaction.Commit();
-
-                                return new Update { execute = true, message = "Request completed successfully", affectedRowCount = affectedRowCount};
-                            }
-                        }
-                        catch (SqlException e)
-                        {
-                            transaction.Rollback();
-
-                            return new Update { execute = false, message = "SqlException. Transaction canceled. " + e.Message, exception = true, queryText = queryTexts?[index], parameter = parameters?[index] };
-                        }
-                        catch (Exception e)
-                        {
-                            transaction.Rollback();
-
-                            return new Update { execute = false, message = "Exception. Transaction canceled. " + e.Message, exception = true, queryText = queryTexts?[index], parameter = parameters?[index] };
-                        }
-                    }
-                }
-            }
-            catch (Exception e)
-            {
-                return new Update { execute = false, message = "Exception. Request failed. " + e.Message, exception = true };
-            }
-        }
-
-        /// <summary>Runs one DELETE statement.</summary>
-        /// <param name="queryText">SQL DELETE statement, for example <c>DELETE FROM users WHERE id = @id</c>.</param>
-        /// <param name="parameters">Parameters (name → value). May be <c>null</c>.</param>
-        /// <returns>
-        /// <c>execute</c>: <c>true</c> if the statement ran without error (also when no row matched).
-        /// <c>affectedRowCount</c>: number of deleted rows.
-        /// </returns>
-        public static Delete delete(string queryText, Dictionary<string, object> parameters = null)
-        {
-            try
-            {
-                using (SqlConnection connection = new SqlConnection(connectionString))
-                {
-                    connection.Open();
-
-                    using (SqlCommand command = new SqlCommand())
-                    {
-                        command.Connection = connection;
-                        command.CommandType = CommandType.Text;
-                        command.CommandText = queryText;
+                        command.CommandTimeout = commandTimeout;    
 
                         if (parameters != null)
                         {
@@ -909,67 +633,177 @@ namespace Bee.SQL
 
                         int affectedRowCount = command.ExecuteNonQuery();
 
-                        return new Delete { execute = true, message = "Request completed successfully!", affectedRowCount = affectedRowCount };
+                        if (affectedRowCount > 0)
+                        {
+                            return new Update { execute = true, message = "Request completed successfully", affectedRowCount = affectedRowCount };
+                        }
+
+                        return new Update { execute = false, message = "No rows were changed", queryText = queryText, parameter = parameters };
                     }
                 }
             }
             catch (Exception e)
             {
-                return new Delete { execute = false, message = "Request failed. " + e.Message, exception = true };
+                return new Update { execute = false, message = "Request failed. " + e.Message, stackTrace = e.StackTrace, exception = true, queryText = queryText, parameter = parameters };
             }
         }
 
-        /// <summary>Runs one SQL statement of any type: SELECT, INSERT, UPDATE, DELETE, MERGE, EXEC, CREATE, ALTER, DROP and others.</summary>
-        /// <remarks>
-        /// <para>
-        /// Pass exactly one statement. Only the first result is read, so an error raised by a second statement
-        /// in the same text is not reported. For several statements use
-        /// <see cref="query(List{string}, List{Dictionary{string, object}})"/>.
-        /// </para>
-        /// <para>
-        /// Column names in the result must be unique and not empty: give every computed column a name with
-        /// <c>AS</c> (for example <c>SELECT COUNT(*) AS total</c>). Otherwise values with the same name overwrite each other.
-        /// </para>
-        /// <para>
-        /// Runs without a transaction, so statements that SQL Server does not allow inside a transaction
-        /// (CREATE DATABASE, BACKUP and others) also work here.
-        /// </para>
-        /// <para>
-        /// <c>insertedId</c> is set only when the text starts with <c>INSERT</c> and the first column of the first
-        /// returned row is a number: put the id first, for example <c>OUTPUT INSERTED.id</c>.
-        /// </para>
-        /// </remarks>
-        /// <param name="queryText">One SQL statement.</param>
-        /// <param name="parameters">Parameters (name → value). May be <c>null</c>. A <c>null</c> value is sent as SQL <c>NULL</c>.</param>
-        /// <returns>
-        /// <c>data[0]</c>: returned rows (empty if the statement returns none).
-        /// <c>affectedRowCount</c>: number of rows changed by INSERT, UPDATE, DELETE or MERGE (0 with <c>SET NOCOUNT ON</c>).
-        /// <c>insertedId</c>: the new id for INSERT (see remarks), otherwise <c>null</c>.
-        /// <c>duplicate</c>: <c>true</c> on a UNIQUE or PRIMARY KEY violation (SQL errors 2601, 2627).
-        /// <c>exception</c>, <c>exceptionType</c>, <c>exceptionNumber</c>, <c>message</c>, <c>stackTrace</c>: error details.
-        /// </returns>
-        public static Query query(string queryText, Dictionary<string, object> parameters = null)
+        /// <summary>Runs several UPDATE statements in one transaction. If one fails or changes no rows, all are rolled back.</summary>
+        /// <param name="queryTexts">UPDATE statements, run in order. Each item is one statement, sent as is.</param>
+        /// <param name="parameters">Parameters for each query, in the same order. An item may be null.</param>
+        /// <returns><c>affectedRowCount</c>: total number of changed rows. If a query changes no rows or fails, <c>execute</c> is false and <c>queryText</c>/<c>parameter</c> show that query.</returns>
+        public static Update update(List<string> queryTexts, List<Dictionary<string, object>> parameters = null)
         {
+            if (queryTexts == null || queryTexts.Count == 0)
+            {
+                return new Update { execute = false, message = "No queries provided" };
+            }
+
+            if (parameters != null && parameters.Count != queryTexts.Count)
+            {
+                return new Update { execute = false, message = "The number of parameters does not match the number of queries" };
+            }
+
+            int index = 0;
+
             try
             {
-                var rows = new List<Dictionary<string, object>>();
-
                 int affectedRowCount = 0;
-                long? insertedId = null;
 
                 using (SqlConnection connection = new SqlConnection(connectionString))
                 {
                     connection.Open();
 
-                    using (SqlCommand command = new SqlCommand())
+                    using (SqlTransaction transaction = connection.BeginTransaction())
                     {
-                        command.Connection = connection;
-                        command.CommandType = CommandType.Text;
-                        command.CommandText = queryText;
-
-                        if (parameters != null && parameters.Count > 0)
+                        try
                         {
-                            foreach (KeyValuePair<string, object> parameter in parameters)
+                            for (index = 0; index < queryTexts.Count; index++)
+                            {
+                                using (SqlCommand command = new SqlCommand(queryTexts[index], connection, transaction))
+                                {
+                                    command.CommandTimeout = commandTimeout;
+
+                                    if (parameters != null && parameters[index] != null)
+                                    {
+                                        foreach (var parameter in parameters[index])
+                                        {
+                                            command.Parameters.AddWithValue(parameter.Key, parameter.Value ?? DBNull.Value);
+                                        }
+                                    }
+
+                                    int count = command.ExecuteNonQuery();
+
+                                    if (count <= 0)
+                                    {
+                                        transaction.Rollback();
+
+                                        return new Update
+                                        {
+                                            execute = false,
+                                            message = "Transaction canceled. Query " + (index + 1) + " did not change any rows",
+                                            queryText = queryTexts[index],
+                                            parameter = parameters != null ? parameters[index] : null
+                                        };
+                                    }
+
+                                    affectedRowCount += count;
+                                }
+                            }
+
+                            transaction.Commit();
+
+                            return new Update { execute = true, message = "Request completed successfully", affectedRowCount = affectedRowCount };
+                        }
+                        catch
+                        {
+                            try { transaction.Rollback(); } catch { }
+
+                            throw;
+                        }
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                return new Update
+                {
+                    execute = false,
+                    message = "Transaction canceled. " + e.Message,
+                    stackTrace = e.StackTrace,
+                    exception = true,
+                    queryText = index < queryTexts.Count ? queryTexts[index] : null,
+                    parameter = parameters != null && index < parameters.Count ? parameters[index] : null
+                };
+            }
+        }
+
+        /// <summary>Runs one DELETE statement.</summary>
+        /// <param name="queryText">One DELETE statement, sent as is.</param>
+        /// <param name="parameters">Parameters (name → value). A null value is sent as NULL.</param>
+        /// <returns><c>affectedRowCount</c>: number of deleted rows. If no rows match, <c>execute</c> is false, <c>exception</c> is false and <c>message</c> is "No rows were changed". On an SQL error <c>exception</c> is true.</returns>
+        public static Delete delete(string queryText, Dictionary<string, object> parameters = null)
+        {
+            try
+            {
+                using (SqlConnection connection = new SqlConnection(connectionString))
+                {
+                    connection.Open();
+
+                    using (SqlCommand command = new SqlCommand(queryText, connection))
+                    {
+                        command.CommandTimeout = commandTimeout;
+
+                        if (parameters != null)
+                        {
+                            foreach (var parameter in parameters)
+                            {
+                                command.Parameters.AddWithValue(parameter.Key, parameter.Value ?? DBNull.Value);
+                            }
+                        }
+
+                        int affectedRowCount = command.ExecuteNonQuery();
+
+                        if (affectedRowCount > 0)
+                        {
+                            return new Delete { execute = true, message = "Request completed successfully", affectedRowCount = affectedRowCount };
+                        }
+
+                        return new Delete { execute = false, message = "No rows were changed" };
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                return new Delete { execute = false, message = "Request failed. " + e.Message, stackTrace = e.StackTrace, exception = true };
+            }
+        }
+
+        /// <summary>Runs one SQL statement of any type: SELECT, INSERT, UPDATE, DELETE, MERGE, EXEC, CREATE and others.</summary>
+        /// <param name="queryText">One SQL statement, sent as is.</param>
+        /// <param name="parameters">Parameters (name → value). A null value is sent as NULL.</param>
+        /// <returns><c>data[0]</c>: returned rows (SELECT or OUTPUT). <c>affectedRowCount</c>: number of rows changed by INSERT, UPDATE, DELETE or MERGE (0 for other statements and with SET NOCOUNT ON). <c>insertedId</c>: for a query that starts with INSERT, the first column of the first OUTPUT row if it is an integer, otherwise null. <c>duplicate</c> is true on a UNIQUE or PRIMARY KEY violation.</returns>
+        public static Query query(string queryText, Dictionary<string, object> parameters = null)
+        {
+            try
+            {
+                var rows = new List<Dictionary<string, object>>();
+                int affectedRowCount;
+                long? insertedId = null;
+
+                bool insert = queryText != null && queryText.TrimStart().StartsWith("INSERT", StringComparison.OrdinalIgnoreCase);
+
+                using (SqlConnection connection = new SqlConnection(connectionString))
+                {
+                    connection.Open();
+
+                    using (SqlCommand command = new SqlCommand(queryText, connection))
+                    {
+                        command.CommandTimeout = commandTimeout;
+
+                        if (parameters != null)
+                        {
+                            foreach (var parameter in parameters)
                             {
                                 command.Parameters.AddWithValue(parameter.Key, parameter.Value ?? DBNull.Value);
                             }
@@ -977,36 +811,31 @@ namespace Bee.SQL
 
                         using (SqlDataReader reader = command.ExecuteReader())
                         {
-                            while (reader.Read())
+                            while (reader.FieldCount > 0 && reader.Read())
                             {
                                 var row = new Dictionary<string, object>();
 
-                                for (int i = 0; i <= reader.FieldCount - 1; i++)
+                                for (int i = 0; i < reader.FieldCount; i++)
                                 {
-                                    if (reader.IsDBNull(i))
+                                    row[reader.GetName(i)] = reader.IsDBNull(i) ? null : reader.GetValue(i);
+                                }
+
+                                if (insert && rows.Count == 0)
+                                {
+                                    object value = reader.GetValue(0);
+
+                                    if (value is long || value is int || value is short || value is byte || value is decimal)
                                     {
-                                        row[reader.GetName(i)] = null;
-                                    }
-                                    else
-                                    {
-                                        row[reader.GetName(i)] = reader.GetValue(i);
+                                        insertedId = Convert.ToInt64(value);
                                     }
                                 }
 
                                 rows.Add(row);
                             }
 
+                            while (reader.NextResult()) { }
+
                             affectedRowCount = Math.Max(reader.RecordsAffected, 0);
-                        }
-
-                        if (rows.Count > 0 && queryText.TrimStart().ToUpperInvariant().StartsWith("INSERT"))
-                        {
-                            object value = rows[0].Values.First();
-
-                            if (value is int || value is long || value is decimal)
-                            {
-                                insertedId = Convert.ToInt64(value);
-                            }
                         }
                     }
                 }
@@ -1023,70 +852,36 @@ namespace Bee.SQL
             }
             catch (SqlException e)
             {
-                return new Query
-                {
-                    execute = false,
-                    exception = true,
-                    message = "Request failed. " + e.Message,
-                    exceptionType = e.GetType().Name,
-                    exceptionNumber = e.Number,
-                    duplicate = e.Number == 2627 || e.Number == 2601,
-                    stackTrace = e.StackTrace,
-                    queryText = queryText
-                };
+                return new Query { execute = false, message = "Request failed. " + e.Message, stackTrace = e.StackTrace, duplicate = e.Number == 2601 || e.Number == 2627, exception = true, exceptionType = e.GetType().Name, exceptionNumber = e.Number, queryText = queryText };
             }
             catch (Exception e)
             {
-                return new Query
-                {
-                    execute = false,
-                    message = "Request failed. " + e.Message,
-                    stackTrace = e.StackTrace,
-                    queryText = queryText
-                };
+                return new Query { execute = false, message = "Request failed. " + e.Message, stackTrace = e.StackTrace, exception = true, exceptionType = e.GetType().Name, queryText = queryText };
             }
         }
 
-        /// <summary>Runs several SQL statements of any type in one transaction. If one fails, nothing is saved.</summary>
-        /// <remarks>
-        /// <para>
-        /// Each item must be exactly one statement, with the same rules as in
-        /// <see cref="query(string, Dictionary{string, object})"/> (one statement, unique column names, id in the first column).
-        /// </para>
-        /// <para>
-        /// Statements that SQL Server does not allow inside a transaction (CREATE/ALTER DATABASE, BACKUP, RESTORE
-        /// and others) fail here (error 226); run them with <see cref="query(string, Dictionary{string, object})"/>.
-        /// </para>
-        /// </remarks>
-        /// <param name="queryTexts">SQL statements, run in order. Must not be empty.</param>
-        /// <param name="parameters">
-        /// Parameters for each statement, in the same order. May be <c>null</c>. If set, its count must equal
-        /// the count of <paramref name="queryTexts"/>; use <c>null</c> for a statement without parameters.
-        /// </param>
-        /// <returns>
-        /// <c>data[i]</c>: rows returned by statement i (empty if it returned none).
-        /// <c>affectedRowCount</c>: total number of changed rows.
-        /// <c>insertedIds[i]</c>: the id returned by statement i if it is an INSERT, otherwise <c>null</c>.
-        /// <c>insertedId</c>: the last id found.
-        /// <c>duplicate</c>, <c>exception</c>, <c>exceptionType</c>, <c>exceptionNumber</c>, <c>message</c>, <c>stackTrace</c>: error details.
-        /// </returns>
+        /// <summary>Runs several SQL statements of any type in one transaction. If one fails, or a query that starts with INSERT, UPDATE, DELETE or MERGE changes no rows, all are rolled back.</summary>
+        /// <param name="queryTexts">SQL statements, run in order. Each item is one statement, sent as is.</param>
+        /// <param name="parameters">Parameters for each query, in the same order. An item may be null.</param>
+        /// <returns><c>data[i]</c>: rows returned by query i. <c>affectedRowCount</c>: total number of changed rows. <c>insertedIds[i]</c>: for an INSERT, the first column of its first OUTPUT row if it is an integer, otherwise null. <c>insertedId</c>: the value of the last INSERT. <c>duplicate</c> is true on a UNIQUE or PRIMARY KEY violation. If a query changes no rows or fails, <c>execute</c> is false and <c>queryText</c> shows that query.</returns>
         public static Query query(List<string> queryTexts, List<Dictionary<string, object>> parameters = null)
         {
+            if (queryTexts == null || queryTexts.Count == 0)
+            {
+                return new Query { execute = false, message = "No queries provided" };
+            }
+
+            if (parameters != null && parameters.Count != queryTexts.Count)
+            {
+                return new Query { execute = false, message = "The number of parameters does not match the number of queries" };
+            }
+
+            int index = 0;
+
             try
             {
-                if (queryTexts == null || queryTexts.Count == 0)
-                {
-                    return new Query { execute = false, message = "No queries provided" };
-                }
-
-                if (parameters != null && parameters.Count != queryTexts.Count)
-                {
-                    return new Query { execute = false, message = "The number of parameters does not match the number of queries" };
-                }
-
                 var data = new List<List<Dictionary<string, object>>>();
                 var insertedIds = new List<long?>();
-
                 int affectedRowCount = 0;
                 long? insertedId = null;
 
@@ -1098,19 +893,16 @@ namespace Bee.SQL
                     {
                         try
                         {
-                            using (SqlCommand command = new SqlCommand())
+                            for (index = 0; index < queryTexts.Count; index++)
                             {
-                                command.Connection = connection;
-                                command.Transaction = transaction;
-                                command.CommandType = CommandType.Text;
+                                string text = (queryTexts[index] ?? "").TrimStart().ToUpperInvariant();
 
-                                for (int index = 0; index <= queryTexts.Count - 1; index++)
+                                bool insert = text.StartsWith("INSERT");
+                                bool change = insert || text.StartsWith("UPDATE") || text.StartsWith("DELETE") || text.StartsWith("MERGE");
+
+                                using (SqlCommand command = new SqlCommand(queryTexts[index], connection, transaction))
                                 {
-                                    var rows = new List<Dictionary<string, object>>();
-                                    long? id = null;
-
-                                    command.CommandText = queryTexts[index];
-                                    command.Parameters.Clear();
+                                    command.CommandTimeout = commandTimeout;
 
                                     if (parameters != null && parameters[index] != null)
                                     {
@@ -1120,134 +912,134 @@ namespace Bee.SQL
                                         }
                                     }
 
+                                    var rows = new List<Dictionary<string, object>>();
+                                    long? id = null;
+                                    int count;
+
                                     using (SqlDataReader reader = command.ExecuteReader())
                                     {
-                                        while (reader.Read())
+                                        while (reader.FieldCount > 0 && reader.Read())
                                         {
                                             var row = new Dictionary<string, object>();
 
-                                            for (int i = 0; i <= reader.FieldCount - 1; i++)
+                                            for (int i = 0; i < reader.FieldCount; i++)
                                             {
-                                                if (reader.IsDBNull(i))
+                                                row[reader.GetName(i)] = reader.IsDBNull(i) ? null : reader.GetValue(i);
+                                            }
+
+                                            if (insert && rows.Count == 0)
+                                            {
+                                                object value = reader.GetValue(0);
+
+                                                if (value is long || value is int || value is short || value is byte || value is decimal)
                                                 {
-                                                    row[reader.GetName(i)] = null;
-                                                }
-                                                else
-                                                {
-                                                    row[reader.GetName(i)] = reader.GetValue(i);
+                                                    id = Convert.ToInt64(value);
                                                 }
                                             }
 
                                             rows.Add(row);
                                         }
 
-                                        affectedRowCount += Math.Max(reader.RecordsAffected, 0);
+                                        while (reader.NextResult()) { }
+
+                                        count = Math.Max(reader.RecordsAffected, 0);
                                     }
 
-                                    if (rows.Count > 0 && queryTexts[index].TrimStart().ToUpperInvariant().StartsWith("INSERT"))
+                                    if (change && count == 0)
                                     {
-                                        object value = rows[0].Values.First();
+                                        transaction.Rollback();
 
-                                        if (value is int || value is long || value is decimal)
+                                        return new Query
                                         {
-                                            id = Convert.ToInt64(value);
-                                            insertedId = id;
-                                        }
+                                            execute = false,
+                                            message = "Transaction canceled. Query " + (index + 1) + " did not change any rows",
+                                            queryText = queryTexts[index]
+                                        };
                                     }
 
+                                    affectedRowCount += count;
                                     data.Add(rows);
-                                    insertedIds.Add(id);
+
+                                    if (insert)
+                                    {
+                                        insertedId = id;
+                                    }
+
+                                    insertedIds.Add(insert ? id : null);
                                 }
-
-                                transaction.Commit();
-
-                                return new Query
-                                {
-                                    execute = true,
-                                    message = "Request completed successfully",
-                                    data = data,
-                                    affectedRowCount = affectedRowCount,
-                                    insertedId = insertedId,
-                                    insertedIds = insertedIds
-                                };
                             }
-                        }
-                        catch (SqlException e)
-                        {
-                            try 
-                            { 
-                                transaction.Rollback(); 
-                            } 
-                            catch 
-                            { 
 
-                            }
+                            transaction.Commit();
 
                             return new Query
                             {
-                                execute = false,
-                                message = "Transaction canceled. " + e.Message,
-                                stackTrace = e.StackTrace,
-                                duplicate = e.Number == 2627 || e.Number == 2601,
-                                exception = true,
-                                exceptionType = e.GetType().Name,
-                                exceptionNumber = e.Number
+                                execute = true,
+                                message = "Request completed successfully",
+                                data = data,
+                                affectedRowCount = affectedRowCount,
+                                insertedId = insertedId,
+                                insertedIds = insertedIds
                             };
                         }
-                        catch (Exception e)
+                        catch
                         {
-                            try 
-                            { 
-                                transaction.Rollback(); 
-                            } 
-                            catch 
-                            { 
+                            try { transaction.Rollback(); } catch { }
 
-                            }
-
-                            return new Query
-                            {
-                                execute = false,
-                                message = "Transaction canceled. " + e.Message,
-                                stackTrace = e.StackTrace,
-                                exception = true,
-                                exceptionType = e.GetType().Name
-                            };
+                            throw;
                         }
                     }
                 }
             }
+            catch (SqlException e)
+            {
+                return new Query
+                {
+                    execute = false,
+                    message = "Transaction canceled. " + e.Message,
+                    stackTrace = e.StackTrace,
+                    duplicate = e.Number == 2601 || e.Number == 2627,
+                    exception = true,
+                    exceptionType = e.GetType().Name,
+                    exceptionNumber = e.Number,
+                    queryText = index < queryTexts.Count ? queryTexts[index] : null
+                };
+            }
             catch (Exception e)
             {
-                return new Query { execute = false, message = "Request failed. " + e.Message, stackTrace = e.StackTrace };
+                return new Query
+                {
+                    execute = false,
+                    message = "Transaction canceled. " + e.Message,
+                    stackTrace = e.StackTrace,
+                    exception = true,
+                    exceptionType = e.GetType().Name,
+                    queryText = index < queryTexts.Count ? queryTexts[index] : null
+                };
             }
         }
 
         /// <summary>Runs a stored procedure and returns the rows of its first result.</summary>
-        /// <param name="procedureName">Procedure name, for example <c>dbo.GetUsers</c>.</param>
-        /// <param name="procedureParameters">Procedure parameters (name → value), for example <c>{ "@age", 18 }</c>. May be <c>null</c>.</param>
-        /// <returns>
-        /// <c>data</c>: list of rows (column name → value); empty if the procedure returns no rows.
-        /// </returns>
+        /// <param name="procedureName">Procedure name.</param>
+        /// <param name="procedureParameters">Parameters (name → value). A null value is sent as NULL.</param>
+        /// <returns><c>data</c>: rows of the first result as "column → value"; empty if the procedure returns no rows. Later results are read to the end, so an error in them is reported.</returns>
         public static ExecuteResult execute(string procedureName, Dictionary<string, object> procedureParameters = null)
         {
             try
             {
-                List<Dictionary<string, object>> rows = new List<Dictionary<string, object>>();
+                var rows = new List<Dictionary<string, object>>();
 
                 using (SqlConnection connection = new SqlConnection(connectionString))
                 {
                     connection.Open();
 
-                    using (SqlCommand command = new SqlCommand())
+                    using (SqlCommand command = new SqlCommand(procedureName, connection))
                     {
-                        command.Connection = connection;
                         command.CommandType = CommandType.StoredProcedure;
-                        command.CommandText = procedureName;
+                        command.CommandTimeout = commandTimeout;
 
                         if (procedureParameters != null)
                         {
-                            foreach (KeyValuePair<string, object> parameter in procedureParameters)
+                            foreach (var parameter in procedureParameters)
                             {
                                 command.Parameters.AddWithValue(parameter.Key, parameter.Value ?? DBNull.Value);
                             }
@@ -1255,17 +1047,29 @@ namespace Bee.SQL
 
                         using (SqlDataReader reader = command.ExecuteReader())
                         {
-                            while (reader.Read())
+                            bool rowsRead = false;
+
+                            do
                             {
-                                var row = new Dictionary<string, object>();
-
-                                for (int i = 0; i <= reader.FieldCount - 1; i++)
+                                if (reader.FieldCount > 0 && !rowsRead)
                                 {
-                                    row[reader.GetName(i).ToString()] = reader.IsDBNull(i) ? null : reader[reader.GetValue(i).ToString()];
-                                }
+                                    rowsRead = true;
 
-                                rows.Add(row);
+                                    while (reader.Read())
+                                    {
+                                        var row = new Dictionary<string, object>();
+
+                                        for (int i = 0; i < reader.FieldCount; i++)
+                                        {
+                                            row[reader.GetName(i)] = reader.IsDBNull(i) ? null : reader.GetValue(i);
+                                        }
+
+                                        rows.Add(row);
+                                    }
+                                }
                             }
+
+                            while (reader.NextResult());
                         }
                     }
                 }
@@ -1274,7 +1078,7 @@ namespace Bee.SQL
             }
             catch (Exception e)
             {
-                return new ExecuteResult { execute = false, message = "Request failed. " + e.Message, data = new List<Dictionary<string, object>>() };
+                return new ExecuteResult { execute = false, message = "Request failed. " + e.Message, stackTrace = e.StackTrace, exception = true };
             }
         }
     }
